@@ -29,7 +29,7 @@ public class ThinStructure : MonoBehaviour {
     public static HashSet<int>[] linkInfo;
     public static int verticeNum;
     public static int edgeNum;
-    static float tubesize = 30f;
+    public static float tuberadii = 10f;
     // Use this for initialization
     void Start () {
         edgeVecs = new List<Vector3>();
@@ -95,7 +95,13 @@ public class ThinStructure : MonoBehaviour {
         file.Close();
 
         //read link info
-        file = new System.IO.StreamReader(".\\inputSet\\" + tar + "\\input\\linkinfo.txt");
+        try
+        {
+            file = new System.IO.StreamReader(".\\inputSet\\" + tar + "\\input\\linkinfo.txt");
+        }
+        catch{
+            return;
+        }
         int dataanum = int.Parse(file.ReadLine());
         for (int i = 0; i < dataanum; i++)
         {
@@ -119,7 +125,7 @@ public class ThinStructure : MonoBehaviour {
         {
             Vector3 vertice = vertices[i];
             GameObject go = GameObject.Instantiate(Resources.Load("Sphere"), vertice, Quaternion.identity) as GameObject;
-            go.transform.localScale = new Vector3(tubesize, tubesize, tubesize);
+            go.transform.localScale = new Vector3(tuberadii*2, tuberadii * 2, tuberadii * 2);
             go.transform.parent = GameObject.Find("Collect").transform;
             verticeGOs.Add(go);
         }
@@ -137,12 +143,14 @@ public class ThinStructure : MonoBehaviour {
             Quaternion fromto3 = Quaternion.LookRotation(vec, norm);
 
             GameObject go = GameObject.Instantiate(Resources.Load("Cylinder"), cent, fromto2) as GameObject;
-            GameObject go2 = GameObject.Instantiate(Resources.Load("Plane"), cent, fromto2) as GameObject;
-            go.transform.localScale = new Vector3(tubesize, (v1 - v2).magnitude / 2, tubesize);
+            go.transform.localScale = new Vector3(tuberadii * 2, (v1 - v2).magnitude / 2, tuberadii * 2);
             go.transform.parent = GameObject.Find("Collect").transform;
-            go2.transform.localScale = new Vector3(tubesize, (v1 - v2).magnitude / 2, tubesize);
-            go2.transform.parent = go.transform.parent;
             edgeGOs.Add(go);
+            /*
+            GameObject go2 = GameObject.Instantiate(Resources.Load("Plane"), cent, fromto2) as GameObject;
+            go2.transform.localScale = new Vector3(tuberadii * 2, (v1 - v2).magnitude / 2, tuberadii * 2);
+            go2.transform.parent = go.transform.parent;
+            */
         }
     }
 }
