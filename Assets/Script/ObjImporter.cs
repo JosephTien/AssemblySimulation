@@ -64,6 +64,7 @@ public class ObjImporter
         mesh.vertices = newMesh.vertices;
         mesh.uv = newMesh.uv;
         mesh.triangles = newTriangles;
+        
         if (newMesh.normals.Length != mesh.vertices.Length) mesh.RecalculateNormals();
         else mesh.normals = newMesh.normals;
 

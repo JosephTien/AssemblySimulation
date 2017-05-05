@@ -7,17 +7,24 @@ using System.Diagnostics;
 public class Executor : MonoBehaviour
 {
     private Thread thread;
+    private Thread thread2;
     private Process CSGCommandLineTool = new Process();
     static public  Process CMD = new Process();
-    public static Queue<string> commands=new Queue<string>();
+    public static Queue<string> CSGCommands = new Queue<string>();
     string exeName = @"CSGCommandLineTool.exe";
     string exePath = @"CSGCommandLineTool\";
+    public static Queue<string> ready = new Queue<string>();
+    public static bool debug = false;
 
     void commandTest()
     {
-        command("LOAD cube");
-        command("COPY cube1 cube");
-        command("WRITE cube1");
+        csgcommand("LOAD cube");
+        csgcommand("COPY cube_1 cube");
+        csgcommand("LOAD sphere");
+        csgcommand("COPY sphere_1 sphere");
+        csgcommand("NEW new_");
+        csgcommand("+ new_ sphere_1 cube_1");
+        csgcommand("WRITE new_");
     }
 
     // Use this for initialization
@@ -25,9 +32,12 @@ public class Executor : MonoBehaviour
     {
         thread = new Thread(Call);
         thread.IsBackground = true;
+        thread2 = new Thread(Call2);
+        thread.IsBackground = true;
         startCSGCommandLineTool();
         startCMD();
         thread.Start();
+        thread2.Start();
         //commandTest();
     }
     // Update is called once per frame
@@ -43,7 +53,7 @@ public class Executor : MonoBehaviour
         CMD.StartInfo.FileName = "cmd.exe";
         CMD.StartInfo.WorkingDirectory = exePath;
         CMD.StartInfo.UseShellExecute = false;
-        CMD.StartInfo.CreateNoWindow = true;
+        CMD.StartInfo.CreateNoWindow = false;
         CMD.StartInfo.RedirectStandardInput = true;
         CMD.StartInfo.RedirectStandardOutput = true;
         CMD.Start();
@@ -56,32 +66,42 @@ public class Executor : MonoBehaviour
         //myProcess.StartInfo.Arguments = "script.txt";
         CSGCommandLineTool.StartInfo.UseShellExecute = false;
         CSGCommandLineTool.StartInfo.CreateNoWindow = false;
-        //myProcess.StartInfo.RedirectStandardOutput = true;
+        CSGCommandLineTool.StartInfo.RedirectStandardOutput = true;
         CSGCommandLineTool.StartInfo.RedirectStandardInput = true;
         CSGCommandLineTool.Start();
         CSGCommandLineTool.StandardInput.WriteLine(" ");
     }
-    static public void command(string line)
+    static public void csgcommand(string line)
     {
-        commands.Enqueue(line);
+        CSGCommands.Enqueue(line);
     }
     private void Call()
     {
         while (true)
         {
             Thread.Sleep(333);
-            bool isempty=true;
-            foreach (string x in commands)
+            bool isempty = true;
+            foreach (string x in CSGCommands)
             {
                 isempty = false;
                 break;
             }
             if (!isempty)
             {
-                string line = commands.Dequeue();
-                print(line);
-                CSGCommandLineTool.StandardInput.WriteLine( line );
+                string line = CSGCommands.Dequeue();
+                CSGCommandLineTool.StandardInput.WriteLine(line);
             }
+        }
+    }
+    private void Call2()
+    {
+        while (!CSGCommandLineTool.HasExited) {
+            string output = CSGCommandLineTool.StandardOutput.ReadLine();
+            string[] result = output.Split(' ');
+            if (result[0] == "WRITE") {
+                ready.Enqueue(result[1]);
+            }
+            if(debug)print("CMD : " + output);
         }
     }
     private void OnDisable()
@@ -90,10 +110,11 @@ public class Executor : MonoBehaviour
         {
             CSGCommandLineTool.Kill();
             CMD.Kill();
+            thread.Abort();
+            thread2.Abort();
         }
         catch{
         }
-        thread.Abort();//強制中斷當前執行緒
     }
     /*
     private void OnApplicationQuit()

@@ -16,53 +16,32 @@ public class Edge {
     public int idx2;
 }
 public class ThinStructure : MonoBehaviour {
-    public static List<Vector3> vertices;
-    public static List<Edge> edges;
-    public static List<Vector3> edgeVecs;
-    public static List<Vector3> edgeCents;
-    public static List<Vector3> splitNorms;
-    public static List<GameObject> verticeGOs;
-    public static List<GameObject> edgeGOs;
+    public static Vector3[] vertices;
+    public static Edge[] edges;
+    public static Vector3[] splitNorms;
+    public static List<Vector3> edgeVecs = new List<Vector3>();
+    public static List<Vector3> edgeCents = new List<Vector3>();
+    public static List<GameObject> verticeGOs = new List<GameObject>();
+    public static List<GameObject> edgeGOs = new List<GameObject>();
     public static int[][] neighborMap;
-    public static List<HashSet<int>> linkInfo = new List<HashSet<int>>();
+    public static HashSet<int>[] verticesvertices;
+    public static HashSet<int>[] verticesedges;
+    public static HashSet<int>[] linkInfo;
     public static int verticeNum;
     public static int edgeNum;
-    float div = 20;
-    float tubesize = 0.5f;
+    static float tubesize = 30f;
     // Use this for initialization
     void Start () {
-        vertices = new List<Vector3>();
-        edges = new List<Edge>();
-        splitNorms = new List<Vector3>();
         edgeVecs = new List<Vector3>();
         edgeCents = new List<Vector3>();
         verticeGOs = new List<GameObject>();
         edgeGOs = new List<GameObject>();
         edgeGOs = new List<GameObject>();
     }
-
-   
-    public void restart() {
-        GameObject collect = GameObject.Find("Collect");
-        for (int i = 0; i < collect.transform.childCount; i++)
-        {
-            GameObject go = collect.transform.GetChild(i).gameObject;
-            Destroy(go);
-        }
-        vertices.Clear();
-        edges.Clear();
-        splitNorms.Clear();
-        edgeVecs.Clear();
-        edgeCents.Clear();
-        verticeGOs.Clear();
-        edgeGOs.Clear();
-    }
-    
-    void basicRead(int tar)
+    public static void basicRead(int tar)
     {
         string line;
         string[] items;
-
 
         //read vert
         System.IO.StreamReader file = new System.IO.StreamReader(".\\inputSet\\" + tar + "\\input\\thinstruct.txt");
@@ -70,14 +49,23 @@ public class ThinStructure : MonoBehaviour {
         verticeNum = int.Parse(items[0]);
         edgeNum = int.Parse(items[1]);
         //prepare data
-        for (int i = 0; i < verticeNum; i++) linkInfo[i] = new HashSet<int>();
+        vertices = new Vector3[verticeNum];
+        edges = new Edge[edgeNum];
+        splitNorms = new Vector3[edgeNum];
         neighborMap = new int[verticeNum][];
+        linkInfo = new HashSet<int>[verticeNum];
+        verticesvertices = new HashSet<int>[verticeNum];
+        verticesedges = new HashSet<int>[verticeNum];
+        for (int i = 0; i < verticeNum; i++) linkInfo[i] = new HashSet<int>();
+        for (int i = 0; i < verticeNum; i++) verticesvertices[i] = new HashSet<int>();
+        for (int i = 0; i < verticeNum; i++) verticesedges[i] = new HashSet<int>();
         for (int i = 0; i < neighborMap.Length; i++) neighborMap[i] = new int[verticeNum];
+        //keep reading
         for (int i = 0; i < verticeNum; i++)
         {
             line = file.ReadLine(); items = line.Split(' ');
             if (items.Length <= 1) { i--; continue; }
-            vertices.Add(new Vector3(float.Parse(items[0]), float.Parse(items[1]), float.Parse(items[2])));
+            vertices[i] = new Vector3(float.Parse(items[0]), float.Parse(items[1]), float.Parse(items[2]));
         }
         for (int i = 0; i < edgeNum; i++)
         {
@@ -85,18 +73,24 @@ public class ThinStructure : MonoBehaviour {
             if (items.Length <= 1) { i--; continue; }
             int v1 = int.Parse(items[0]);
             int v2 = int.Parse(items[1]);
-            edges.Add(new Edge(v1, v2));
+            edges[i]= new Edge(v1, v2);
             neighborMap[v1][v2] = neighborMap[v2][v1] = i;
+            verticesvertices[v1].Add(v2);
+            verticesvertices[v2].Add(v1);
+            verticesedges[v1].Add(i);
+            verticesedges[v2].Add(i);
         }
         file.Close();
 
-        //read linkInfo
+        //read splitInfo
         file = new System.IO.StreamReader(".\\inputSet\\" + tar + "\\input\\splitinfo.txt");
         for (int i = 0; i < edgeNum; i++)
         {
             line = file.ReadLine(); items = line.Split(' ');
             if (items.Length <= 1) { i--; continue; }
-            splitNorms.Add(new Vector3(float.Parse(items[0]), float.Parse(items[1]), float.Parse(items[2])));
+            splitNorms[i] = new Vector3(float.Parse(items[0]), float.Parse(items[1]), float.Parse(items[2]));
+            Vector3 vec = vertices[edges[i].idx1] - vertices[edges[i].idx2];
+            splitNorms[i] = Vector3.Cross(Vector3.Cross(vec, splitNorms[i]), vec).normalized;
         }
         file.Close();
 
@@ -112,13 +106,19 @@ public class ThinStructure : MonoBehaviour {
             linkInfo[vi].Add(ei);
         }
         file.Close();
+        //fix link info
+        for (int i = 0; i < verticeNum; i++) {
+            if (verticesedges[i].Count == 1) {
+                foreach(int e in verticesedges[i])linkInfo[i].Add(e);
+            }
+        }
     }
-    void basicPut()
+    public static void basicPut()
     {
         for (int i = 0; i < verticeNum; i++)
         {
             Vector3 vertice = vertices[i];
-            GameObject go = GameObject.Instantiate(Resources.Load("Sphere"), vertice / div, Quaternion.identity) as GameObject;
+            GameObject go = GameObject.Instantiate(Resources.Load("Sphere"), vertice, Quaternion.identity) as GameObject;
             go.transform.localScale = new Vector3(tubesize, tubesize, tubesize);
             go.transform.parent = GameObject.Find("Collect").transform;
             verticeGOs.Add(go);
@@ -134,11 +134,14 @@ public class ThinStructure : MonoBehaviour {
             norm = Vector3.Cross(Vector3.Cross(vec, norm), vec);
             Quaternion fromto = Quaternion.FromToRotation(new Vector3(0, 1, 0), vec);
             Quaternion fromto2 = Quaternion.LookRotation(norm, vec);
+            Quaternion fromto3 = Quaternion.LookRotation(vec, norm);
 
-            //GameObject go = GameObject.Instantiate(Resources.Load("Column"), cent / div, fromto2) as GameObject;
-            GameObject go = GameObject.Instantiate(Resources.Load("Cylinder"), cent / div, fromto2) as GameObject;
-            go.transform.localScale = new Vector3(tubesize, (v1 - v2).magnitude / div / 2, tubesize);
+            GameObject go = GameObject.Instantiate(Resources.Load("Cylinder"), cent, fromto2) as GameObject;
+            GameObject go2 = GameObject.Instantiate(Resources.Load("Plane"), cent, fromto2) as GameObject;
+            go.transform.localScale = new Vector3(tubesize, (v1 - v2).magnitude / 2, tubesize);
             go.transform.parent = GameObject.Find("Collect").transform;
+            go2.transform.localScale = new Vector3(tubesize, (v1 - v2).magnitude / 2, tubesize);
+            go2.transform.parent = go.transform.parent;
             edgeGOs.Add(go);
         }
     }
