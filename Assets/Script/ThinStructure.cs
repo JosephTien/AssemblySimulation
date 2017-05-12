@@ -2,6 +2,8 @@
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.SceneManagement;
+using System.IO;
+using System.Text;
 public class Edge {
     public Edge(int idx1, int idx2) {
         if (idx1 > idx2) {
@@ -14,6 +16,10 @@ public class Edge {
     }
     public int idx1;
     public int idx2;
+    public float minAngle1;
+    public float minAngle2;
+    public float fixDis1;
+    public float fixDis2;
 }
 public class ThinStructure : MonoBehaviour {
     public static Vector3[] vertices;
@@ -30,6 +36,7 @@ public class ThinStructure : MonoBehaviour {
     public static int verticeNum;
     public static int edgeNum;
     public static float tuberadii = 10f;
+    public static int curSet;
     // Use this for initialization
     void Start () {
         edgeVecs = new List<Vector3>();
@@ -40,9 +47,9 @@ public class ThinStructure : MonoBehaviour {
     }
     public static void basicRead(int tar)
     {
+        curSet = tar;
         string line;
         string[] items;
-
         //read vert
         System.IO.StreamReader file = new System.IO.StreamReader(".\\inputSet\\" + tar + "\\input\\thinstruct.txt");
         line = file.ReadLine(); items = line.Split(' ');
@@ -94,6 +101,9 @@ public class ThinStructure : MonoBehaviour {
         }
         file.Close();
 
+        //fix angle distance
+        fixAngleDistance();
+
         //read link info
         try
         {
@@ -118,7 +128,52 @@ public class ThinStructure : MonoBehaviour {
                 foreach(int e in verticesedges[i])linkInfo[i].Add(e);
             }
         }
+
     }
+    public static void outputsplitNorms(int setnum) {
+        //read splitInfo
+        StringBuilder sb = new StringBuilder();
+        for (int i = 0; i < edgeNum; i++)
+        {
+            sb.Append(string.Format("{0} {1} {2}\n", splitNorms[i].x, splitNorms[i].y, splitNorms[i].z));
+        }
+        string filename = "inputSet\\" + setnum + "\\input\\splitinfo.txt";
+        using (StreamWriter sw = new StreamWriter(filename))
+        {
+            sw.Write(sb.ToString());
+        }
+    }
+    public static void fixAngleDistance() {
+        for (int i = 0; i < edgeNum; i++)
+        {
+            float minAngle1 = 180;
+            float minAngle2 = 180;
+            int idx1 = edges[i].idx1;
+            int idx2 = edges[i].idx2;
+            foreach (int idxTo in verticesvertices[idx1])
+            {
+                if (idxTo == idx2) continue;
+                Vector3 vecTo = vertices[idxTo] - vertices[idx1];
+                Vector3 vecFrom = vertices[idx2] - vertices[idx1];
+                minAngle1 = Mathf.Min(Vector3.Angle(vecFrom, vecTo), minAngle1);
+            }
+            foreach (int idxTo in verticesvertices[idx2])
+            {
+                if (idxTo == idx1) continue;
+                Vector3 vecTo = vertices[idxTo] - vertices[idx2];
+                Vector3 vecFrom = vertices[idx1] - vertices[idx2];
+                minAngle2 = Mathf.Min(Vector3.Angle(vecFrom, vecTo), minAngle2);
+            }
+            edges[i].minAngle1 = minAngle1;
+            edges[i].minAngle2 = minAngle2;
+
+            if (edges[i].minAngle1 <= 90) edges[i].fixDis1 = tuberadii / Mathf.Tan(edges[i].minAngle1 / 2 / 180 * Mathf.PI);
+            else edges[i].fixDis1 = ThinStructure.tuberadii * Mathf.Cos(edges[i].minAngle1 - 90);
+            if (edges[i].minAngle2 <= 90) edges[i].fixDis2 = ThinStructure.tuberadii / Mathf.Tan(edges[i].minAngle2 / 2 / 180 * Mathf.PI);
+            else edges[i].fixDis2 = ThinStructure.tuberadii * Mathf.Cos(edges[i].minAngle2 - 90);
+        }
+    }
+
     public static void basicPut()
     {
         for (int i = 0; i < verticeNum; i++)
@@ -146,11 +201,9 @@ public class ThinStructure : MonoBehaviour {
             go.transform.localScale = new Vector3(tuberadii * 2, (v1 - v2).magnitude / 2, tuberadii * 2);
             go.transform.parent = GameObject.Find("Collect").transform;
             edgeGOs.Add(go);
-            /*
-            GameObject go2 = GameObject.Instantiate(Resources.Load("Plane"), cent, fromto2) as GameObject;
+            GameObject go2 = GameObject.Instantiate(Resources.Load("Plane2"), cent, fromto2) as GameObject;
             go2.transform.localScale = new Vector3(tuberadii * 2, (v1 - v2).magnitude / 2, tuberadii * 2);
             go2.transform.parent = go.transform.parent;
-            */
         }
     }
 }

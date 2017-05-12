@@ -45,7 +45,11 @@ public class Executor : MonoBehaviour
     {
     }
 
-
+    public static void cpoyObjFileInPoolToInputSet(string name, int tarSet, string rename)
+    {
+        CMD.StandardInput.WriteLine("copy pool\\" + name + ".obj ..\\inputSet\\" + tarSet + "\\inputObj\\");
+        CMD.StandardInput.WriteLine("move ..\\inputSet\\" + tarSet + "\\inputObj\\" + name + ".obj ..\\inputSet\\" + tarSet + "\\inputObj\\" + rename + ".obj");
+    }
     public static void deleteObjFileInPool(string name) {
         CMD.StandardInput.WriteLine("del pool\\"+name+".obj");
     }

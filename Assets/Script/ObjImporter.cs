@@ -69,6 +69,7 @@ public class ObjImporter
         else mesh.normals = newMesh.normals;
 
         mesh.RecalculateBounds();
+        mesh.RecalculateNormals();//??
 
         return mesh;
     }

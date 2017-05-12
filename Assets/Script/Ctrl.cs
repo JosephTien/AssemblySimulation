@@ -58,5 +58,8 @@ public class Ctrl : MonoBehaviour {
             realpos *= 1.25f;
             Camera.main.transform.position = realpos;
         }
+        /***********************************************/
+        if (GameObject.Find("Canvas/Slider"))
+            GameObject.Find("Main Camera/Directional Light").GetComponent<Light>().intensity = GameObject.Find("Canvas/Slider").GetComponent<UnityEngine.UI.Slider>().value;
     }
 }
