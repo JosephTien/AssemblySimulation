@@ -1,7 +1,13 @@
 # Thin structure fabrication
+* **注意事項**
+    * 此為Unity Project。
+    * 由於程式原先為個人開發，所以為圖方便，並未維持易讀性及整體架構的正規化lol...
+        * 之後會慢慢地修改，若有測試或修改的需求可先通知作者協調。
+        
 * **Input**
     * 根據輸入的數字讀取`inputSet/`資料夾中對應編號的testcase
     * 標號後面加上乘號和數字可以scale，如`1031*1000`
+    
 * **Lin (Topo editor)**
     * **Load:** 讀取`thinstruct.lin` *(格式說明於附錄)*
     * **Re:** 讀取`thinstruct.txt` *(格式說明於附錄)*
@@ -24,6 +30,7 @@
         * 該功能用以修復隱含問題的input topo，
         * 同時找出關鍵node。
         * 由這些關鍵node可以自動找出所有的section。
+        
 * **Edit (Merge Component Editor)**
     * **Load:** 讀取`thinstruct.txt`
     * **Group** 自動找出curve並分析。
@@ -35,9 +42,11 @@
         * 選取後壓住空白鍵並使用滑鼠滾輪可改變切面
         * 使用YUIOHJKL可以調整移除方向 (實作中、暫時不詳細說明)
     * **Save/Gsave:** 儲存所有編輯資訊以便後續生成
+    
 * **Generate (CSG output generator)**
     * 根據前面的編輯資訊，利用CSG製作成品
     * 計算完成之後，需要分別依序手動執行`csgcommandlinetool/^.bat`以及`csgcommandlinetool/^.bat`
+    
 * **Simulate**
     * 按下Load讀取output以及拆除方向的資訊
     * 按下Split開始模擬結果
