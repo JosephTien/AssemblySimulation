@@ -31,6 +31,9 @@
     * **Show Impo:** 顯示各個component所隸屬的group
     * **Show edge:** 顯示切面
     * **Hide Node:** 顯示被選擇的curve在指定的拆除方向下，有哪些component會被collide
+        * 壓住空白鍵並使用滑鼠點擊可以選取
+        * 選取後壓住空白鍵並使用滑鼠滾輪可改變切面
+        * 使用YUIOHJKL可以調整移除方向 (實作中、暫時不詳細說明)
     * **Save/Gsave:** 儲存所有編輯資訊以便後續生成
 * **Generate (CSG output generator)**
     * 根據前面的編輯資訊，利用CSG製作成品
@@ -39,3 +42,14 @@
     * 按下Load讀取output以及拆除方向的資訊
     * 按下Split開始模擬結果
     * 按下View可以切換不同預設視角
+
+* **其他說明**
+    * 跟一般的檢視器一樣可以滑鼠拖曳以及滾輪改變視角
+    * 由於程式原先為個人開發，所以為求方便，並未維持易讀性及整體架構的正規化lol...
+        * 若有需要之後會慢慢地修改，若有測試或修改的需求可先通知作者協調。
+
+* **附錄**
+    * topo格式 *(to be continue)*
+    * 相關資訊的紀錄方式 *(to be continue)*
+    * cache格式 *(to be continue)*
+    
