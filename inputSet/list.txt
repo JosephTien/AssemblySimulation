@@ -1,0 +1,23 @@
+0 : line
+1 : loop
+2 : bear
+3 : bad case
+4 : cube
+5 : cross
+6 : 2 junc
+7 : 3 junc
+8 : 4 junc
+9 : 5 junc
+10 : 2 junc why not trivial
+11 : 2 junc sharp
+12 : 4 junc 31
+13 : 3 junc 21
+14 : 類共平面1
+15 : 類共平面2
+16 : 平3爪
+17 : curve
+999 : single
+
+
+101:half
+102:cup

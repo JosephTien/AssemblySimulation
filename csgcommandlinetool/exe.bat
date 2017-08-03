@@ -1,0 +1,1 @@
+CSGCommandLineTool.exe script.txt

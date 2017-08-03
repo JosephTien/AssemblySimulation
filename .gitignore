@@ -4,4 +4,8 @@ Library/*
 ProjectSettings/*
 Temp/*
 .vs/
+obj/*
 Exe/*
+bkup/*
+inputSet/*.obj
+csgcommandlinetool/*_*

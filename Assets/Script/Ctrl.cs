@@ -11,6 +11,8 @@ public class Ctrl : MonoBehaviour {
     Vector3 move = new Vector3(0, 0, 0);
     Vector3 realpos = new Vector3(0, 0, 0);
     public static bool valid = true;
+    float scrollVal = 30;
+    bool reverse = false;
     void Start () {
         realpos = Camera.main.gameObject.transform.position;
     }
@@ -18,6 +20,33 @@ public class Ctrl : MonoBehaviour {
 	void Update () {
 		
 	}
+
+    int state = 0;
+    int statenum = 3;
+    public void defaultView() {
+        state = (state + 1) % statenum;
+        Vector3 xaxis = new Vector3(0, 1, 0);
+        Vector3 yaxis = new Vector3(1, 0, 0);
+        Vector3 move = new Vector3(0, 0, 0);
+        realpos = new Vector3(0, 0, -250);
+        Quaternion camrot = Quaternion.identity;
+        if (state == 0)
+        {
+            
+        }
+        else if(state == 1)
+        {
+            camrot = Quaternion.Euler(0, 90, 0);
+        }
+        else if (state == 2)
+        {
+            camrot = Quaternion.Euler(0, 0, 90);
+        }
+        Camera.main.gameObject.transform.rotation = camrot;
+        realpos = camrot* realpos;
+        Camera.main.gameObject.transform.position = realpos;
+    }
+
     void FixedUpdate()
     {
 
@@ -49,13 +78,25 @@ public class Ctrl : MonoBehaviour {
         if (Input.GetAxis("Mouse ScrollWheel") < 0) // back
         {
             //Camera.main.transform.position *= 1.25f;
-            realpos /= 1.25f;
+            float fixedScrollVal = scrollVal * realpos.magnitude / 250;
+            if (realpos.magnitude < 100) fixedScrollVal = scrollVal;
+             Vector3 realposmove = realpos.normalized * fixedScrollVal;
+            if (reverse) realposmove *= -1;
+            if (!reverse && realpos.magnitude < scrollVal) reverse = true;
+            realpos = realpos - realposmove;
+            //realpos = (realpos.magnitude - scrollVal) / realpos.magnitude * realpos;
             Camera.main.transform.position = realpos;
         }
         if (Input.GetAxis("Mouse ScrollWheel") > 0) // forward
         {
             //Camera.main.transform.position *= 0.8f;
-            realpos *= 1.25f;
+            float fixedScrollVal = scrollVal * realpos.magnitude / 250;
+            if (realpos.magnitude < 100) fixedScrollVal = scrollVal;
+            Vector3 realposmove = realpos.normalized * fixedScrollVal;
+            if (reverse) realposmove *= -1;
+            if (reverse && realpos.magnitude < scrollVal) reverse = false;
+            realpos = realpos + realposmove;
+            //realpos = (realpos.magnitude + scrollVal) / realpos.magnitude * realpos;
             Camera.main.transform.position = realpos;
         }
         /***********************************************/

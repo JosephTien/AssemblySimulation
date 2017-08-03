@@ -1,0 +1,75 @@
+LOAD sphere_23
+LOAD sphere_22
++ sphere_23 sphere_23 sphere_22
+LOAD sphere_21
++ sphere_23 sphere_23 sphere_21
+LOAD cylinder_21
++ sphere_23 sphere_23 cylinder_21
+LOAD sphere_20
++ sphere_23 sphere_23 sphere_20
+LOAD cylinder_20
++ sphere_23 sphere_23 cylinder_20
+LOAD sphere_19
++ sphere_23 sphere_23 sphere_19
+LOAD cylinder_19
++ sphere_23 sphere_23 cylinder_19
+LOAD sphere_18
++ sphere_23 sphere_23 sphere_18
+LOAD cylinder_18
++ sphere_23 sphere_23 cylinder_18
+LOAD sphere_17
++ sphere_23 sphere_23 sphere_17
+LOAD cylinder_17
++ sphere_23 sphere_23 cylinder_17
+LOAD sphere_16
++ sphere_23 sphere_23 sphere_16
+LOAD cylinder_16
++ sphere_23 sphere_23 cylinder_16
+LOAD sphere_15
++ sphere_23 sphere_23 sphere_15
+LOAD cylinder_15
++ sphere_23 sphere_23 cylinder_15
+LOAD sphere_14
++ sphere_23 sphere_23 sphere_14
+LOAD cylinder_14
++ sphere_23 sphere_23 cylinder_14
+LOAD sphere_13
++ sphere_23 sphere_23 sphere_13
+LOAD cylinder_13
++ sphere_23 sphere_23 cylinder_13
+LOAD sphere_12
++ sphere_23 sphere_23 sphere_12
+LOAD cylinder_12
++ sphere_23 sphere_23 cylinder_12
+LOAD cylinder_11
++ sphere_23 sphere_23 cylinder_11
+WRITE sphere_23
+LOAD cube_0
+LOAD cube_1
++ cube_0 cube_0 cube_1
+LOAD cube_2
++ cube_0 cube_0 cube_2
+LOAD cube_3
++ cube_0 cube_0 cube_3
+LOAD cube_4
++ cube_0 cube_0 cube_4
+LOAD cube_5
++ cube_0 cube_0 cube_5
+LOAD cube_6
++ cube_0 cube_0 cube_6
+LOAD cube_7
++ cube_0 cube_0 cube_7
+LOAD cube_8
++ cube_0 cube_0 cube_8
+LOAD cube_9
++ cube_0 cube_0 cube_9
+LOAD cube_10
++ cube_0 cube_0 cube_10
+WRITE cube_0
+LOAD sphere_23
+COPY comp_4 sphere_23
+WRITE comp_4
+* comp_4 sphere_23 cube_0
+WRITE comp_4
+- sphere_23 sphere_23 cube_0
+WRITE sphere_23
