@@ -11,7 +11,7 @@
 * **Lin (Topo editor)**
     * **Load:** 讀取`thinstruct.lin` *(格式說明於附錄)*
     * **Re:** 讀取`thinstruct.txt` *(格式說明於附錄)*
-    * **SPR:** 讀取`thinstruct.txt` *(格式說明於附錄)*
+    * **SPR:** 讀取`thinstruct_.txt` *(格式說明於附錄)*
     * **Simp:** 簡化由點Q、點W、點E所定義的section
         * 分別按住QWE並用滑鼠點擊即可手動選取該三點
     * **Next:** 自動選取下一個section
@@ -33,7 +33,7 @@
         
 * **Edit (Merge Component Editor)**
     * **Load:** 讀取`thinstruct.txt`
-    * **Group** 自動找出curve並分析。
+    * **Group:** 自動找出curve並分析。
     * **Show Sol:** 顯示各個component是否有解
     * **Show Impo:** 顯示各個component所隸屬的group
     * **Show edge:** 顯示切面
@@ -55,6 +55,13 @@
 * **其他說明**
     * 跟一般的檢視器一樣可以滑鼠拖曳以及滾輪改變視角
     * 必須要根據Edit、Generate的順序生成data才能Simulate
+	* 嘗試流程如下:
+	    * 按下input右方的default。
+	    * 按下Lin中的Re，並Save。
+	    * 按下Edit中的Load，按下Group，然後Save。 (預設無merge。可以試試看選取的功能。)
+	    * 按下Generate中的Start (完成後會自動輸出)
+	    * 按照上面的指示手動執行bat
+	    * 開始simulate
 
 * **附錄**
     * topo格式 *(to be continue)*
