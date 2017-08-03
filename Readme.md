@@ -58,7 +58,7 @@
 	* 嘗試流程如下:
 	    * 按下input右方的default。
 	    * 按下Lin中的Re，並Save。
-	    * 按下Edit中的Load，按下Group，然後Save。 (預設無merge。可以試試看選取的功能。)
+	    * 按下Edit中的Load，按下Group，然後GSave。 (預設無merge。可以試試看選取的功能。)
 	    * 按下Generate中的Start (完成後會自動輸出)
 	    * 按照上面的指示手動執行bat
 	    * 開始simulate
