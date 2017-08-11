@@ -9,8 +9,5 @@ Exe/*
 bkup/*
 inputSet/**/inputObj/*
 csgcommandlinetool/pool/*_*
-csgcommandlinetool/*.bat
-!csgcommandlinetool/@.bat
-!csgcommandlinetool/^.bat
-!csgcommandlinetool/_.bat
+csgcommandlinetool/_.bat
 csgcommandlinetool/*.txt
