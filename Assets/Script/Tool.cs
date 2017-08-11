@@ -15,7 +15,7 @@ public class Tool : MonoBehaviour {
 	}
 
     public static Vector3 randomVector() {
-        return new Vector3(Random.Range(0, 1f), Random.Range(0, 1f), Random.Range(0, 1f)).normalized;
+        return new Vector3(Random.Range(-1f, 1f), Random.Range(-1f, 1f), Random.Range(-1f, 1f)).normalized;
     }
 
     public static Vector3 calPerpend(Vector3 baseVec, Vector3 toVec) {

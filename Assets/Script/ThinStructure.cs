@@ -31,11 +31,27 @@ public class Edge {
     public float fixDis2;
 }
 
+public class CompInfo {
+    public CompInfo() {
+        group_u = -1;
+        group_d = -1;
+        norm = Vector3.zero;
+        angleArg = new AngleArg();
+    }
+    public int group_u;
+    public int group_d;
+    public Vector3 norm;
+    public AngleArg angleArg;
+
+}
+
 public class ThinStructure : MonoBehaviour {
     public static Vector3[] vertices;
     public static Edge[] edges;
     public static Vector3[] splitNorms;
     public static AngleArg[] angleArgs;
+    public static CompInfo[] compinfo_edge;
+    public static CompInfo[] compinfo_vert;
     public static List<Vector3> edgeVecs = new List<Vector3>();
     public static List<Vector3> edgeCents = new List<Vector3>();
     public static GameObject[] verticeGOs;
@@ -65,12 +81,16 @@ public class ThinStructure : MonoBehaviour {
         edgeGOs = new GameObject[edgeNum];
         splitNorms = new Vector3[edgeNum];
         angleArgs = new AngleArg[edgeNum];
+        compinfo_edge = new CompInfo[edgeNum];
+        compinfo_vert = new CompInfo[verticeNum];
         neighborMap = new int[verticeNum][];
         edgeConnMap = new int[edgeNum][];
         linkInfo = new HashSet<int>[verticeNum];
         verticesvertices = new HashSet<int>[verticeNum];
         verticesedges = new HashSet<int>[verticeNum];
         for (int i = 0; i < edgeNum; i++) angleArgs[i] = new AngleArg();
+        for (int i = 0; i < edgeNum; i++) compinfo_edge[i] = new CompInfo();
+        for (int i = 0; i < verticeNum; i++) compinfo_vert[i] = new CompInfo();
         for (int i = 0; i < verticeNum; i++) linkInfo[i] = new HashSet<int>();
         for (int i = 0; i < verticeNum; i++) verticesvertices[i] = new HashSet<int>();
         for (int i = 0; i < verticeNum; i++) verticesedges[i] = new HashSet<int>();
@@ -278,6 +298,11 @@ public class ThinStructure : MonoBehaviour {
                     angleArgs[i].angle2_2 = float.Parse(items[5]);
                     angleArgs[i].angle3_2 = float.Parse(items[6]);
                 }
+                if (items.Length == 9)
+                {
+                    angleArgs[i].dir1 = new Vector3(float.Parse(items[3]), float.Parse(items[4]), float.Parse(items[5]));
+                    angleArgs[i].dir2 = new Vector3(float.Parse(items[6]), float.Parse(items[7]), float.Parse(items[8]));
+                }
             }
             file.Close();
         }
@@ -313,6 +338,28 @@ public class ThinStructure : MonoBehaviour {
             }
             file.Close();
         }
+        
+        //read compinfo(group)
+        if (File.Exists(".\\inputSet\\" + tar + "\\input\\groupinfo.txt"))
+        {
+            file = new System.IO.StreamReader(".\\inputSet\\" + tar + "\\input\\groupinfo.txt");
+            for (int i = 0; i < verticeNum; i++)
+            {
+                line = file.ReadLine();
+                items = line.Split(' ');
+                compinfo_vert[i].group_u = int.Parse(items[0]);
+                compinfo_vert[i].group_d = int.Parse(items[1]);
+            }
+            for (int i = 0; i < edgeNum; i++)
+            {
+                line = file.ReadLine();
+                items = line.Split(' ');
+                compinfo_edge[i].group_u = int.Parse(items[0]);
+                compinfo_edge[i].group_d = int.Parse(items[1]);
+            }
+            file.Close();
+        }
+
     }
 
     public static void addEdge(int vi1, int vi2) {
@@ -430,14 +477,21 @@ public class ThinStructure : MonoBehaviour {
         }
     }
 
-
     public static void outputsplitNorms(int setnum) {
         //write splitInfo
         StringBuilder sb = new StringBuilder();
         for (int i = 0; i < edgeNum; i++)
         {
-            sb.Append(string.Format("{0} {1} {2} {3} {4} {5} {6}\n", splitNorms[i].x, splitNorms[i].y, splitNorms[i].z,
+            if (angleArgs[i].hasDirDefine())
+            {
+                sb.Append(string.Format("{0} {1} {2} {3} {4} {5} {6} {7} {8}\n", splitNorms[i].x, splitNorms[i].y, splitNorms[i].z,
+                                                                    angleArgs[i].dir1.x, angleArgs[i].dir1.y, angleArgs[i].dir1.z,
+                                                                    angleArgs[i].dir2.x, angleArgs[i].dir2.y, angleArgs[i].dir2.z));
+            }
+            else {
+                sb.Append(string.Format("{0} {1} {2} {3} {4} {5} {6}\n", splitNorms[i].x, splitNorms[i].y, splitNorms[i].z,
                                                                     angleArgs[i].angle2, angleArgs[i].angle2_2, angleArgs[i].angle3, angleArgs[i].angle3_2));
+            }
         }
         string filename = "inputSet\\" + setnum + "\\input\\splitinfo.txt";
         using (StreamWriter sw = new StreamWriter(filename))

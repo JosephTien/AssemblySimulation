@@ -1,0 +1,26 @@
+LOAD finesphere_0
+LOAD null
++ finesphere_0 finesphere_0 null
+WRITE finesphere_0
+LOAD sphere_1
++ sphere_1 sphere_1 null
+WRITE sphere_1
+LOAD finesphere_3
++ finesphere_3 finesphere_3 null
+WRITE finesphere_3
+LOAD cube_0
+- sphere_1 sphere_1 cube_0
+WRITE sphere_1
+- sphere_1 sphere_1 finesphere_3
+WRITE sphere_1
+LOAD cylinder_1
+- sphere_1 sphere_1 cylinder_1
+WRITE sphere_1
+LOAD sphere_1
+COPY comp_7 sphere_1
+WRITE comp_7
+LOAD cube_2
+* comp_7 sphere_1 cube_2
+WRITE comp_7
+- sphere_1 sphere_1 cube_2
+WRITE sphere_1

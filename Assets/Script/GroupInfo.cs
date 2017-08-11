@@ -10,10 +10,10 @@ public class GroupInfo : MonoBehaviour
     public float[] boundingLen;
     public HashSet<int> vert;
     public HashSet<int> edge;
-    int nodeidx = -1;
+    public int nodeidx = -1;
     Vector3 initNorm;
-    Vector3 curDir;
-    Vector3 curDir2;
+    public Vector3 curDir;
+    public Vector3 curDir2;
     Vector3 cent;
     float aniangle = 0;
     public float curAngle = 0;
@@ -92,6 +92,7 @@ public class GroupInfo : MonoBehaviour
             }
             curDir = initNorm = Algorithm.nodeNorm(nodeidx);
             curDir2 = -curDir;
+            Bounding.boundInfo[nodeidx + ThinStructure.edgeNum].curNorm = initNorm;
             return;
         }
         else {
@@ -154,23 +155,45 @@ public class GroupInfo : MonoBehaviour
             {
                 dir.Add(-bi.anglearg2vec(curAngle, curAngle2_2, curAngle3_2));
             }
-            curDir2 = avrDir(dir.ToArray()); ;
+            curDir2 = avrDir(dir.ToArray());
         }
         checkCurBoundLim();
         checkArg();
     }
     public void rotateTo(Vector3 vec) {
-        if (Vector3.Dot(initNorm, vec) < 0) vec *= -1;
+        //if (Vector3.Dot(initNorm, vec) < 0) vec *= -1;
         curDir = vec;
         curDir2 = -curDir;
+        int reverseCnt = 0;
         foreach (BoundInfo bi in boundInfo)
         {
             if (!bi.isvert)
             {
-                bi.rotateTo(vec);
+                bool reverse;
+                bi.rotateTo(vec, out reverse);
+                if (reverse) reverseCnt++;
+                else reverseCnt--;
+                /*
+                if (Vector3.Dot(vec, bi.curNorm) >= 0)
+                {
+                    //if (bi.angle > 10 && bi.angle < 150) 
+                    print("aa");
+                }
+                else
+                {
+                    //if (bi.angle > 10 && bi.angle < 150) 
+                    print("bb");
+                }
+                */
                 bi.rotateAssisPlane();
             }
         }
+        if (reverseCnt > 0) {
+            curDir *= -1;
+            curDir2 *= -1;
+        }
+        curAngle = Vector3.Angle(initNorm, curDir);//rough
+        
         checkCurBoundLim();
         checkArg();
     }
@@ -309,6 +332,7 @@ public class GroupInfo : MonoBehaviour
     /*Higher logic*/
     public bool mergeMany = false;
     public bool isChild = false;
+    public Vector3 mainNorm;
     public static int mergeGroupCnt = 0;//becareful the init
     public GameObject genMergeRoot() {
         if (isChild) return transform.parent.gameObject;
@@ -319,6 +343,7 @@ public class GroupInfo : MonoBehaviour
         transform.parent = go.transform;
         isChild = true;
         go.GetComponent<GroupInfo>().mergeMany = true;
+        go.GetComponent<GroupInfo>().mainNorm = curDir;
         return go;
     }
     public void mergeNeighborCurve() {//must be node
@@ -326,9 +351,11 @@ public class GroupInfo : MonoBehaviour
         GameObject parent = genMergeRoot();
         foreach (int e in ThinStructure.verticesedges[nodeidx]) {
             GroupInfo gi = Bounding.groupInfo[Bounding.compIdx[e]];
-            //Bounding.boundInfo[e].rotateTo(initNorm);
-            //gi.rotateTo(Bounding.boundInfo[e].angle);
-            gi.rotateTo(initNorm);
+            //Bounding.boundInfo[e].rotateTo(initNorm);//gi.rotateTo(Bounding.boundInfo[e].angle);
+            gi.rotateTo(curDir);
+            //test
+            //foreach (BoundInfo bi in gi.boundInfo) if (!bi.isvert && bi.angle > 10 && bi.angle < 150) { if (Vector3.Dot(curDir, bi.curNorm) >= 0) print("a"); else print("b"); }
+
             gi.setActive(true);
             gi.transform.parent = parent.transform;
             gi.isChild = true;
@@ -342,3 +369,5 @@ public class GroupInfo : MonoBehaviour
         }
     }
 }
+
+

@@ -27,12 +27,13 @@ public class SceneManager : MonoBehaviour {
         closeAllPanel();
         GameObject canvas = GameObject.Find("Canvas");
         if (tar == -1) canvas.transform.Find("Panel_Lin").gameObject.SetActive(true);
-        if (tar == 0)canvas.transform.Find("Panel_Edit").gameObject.SetActive(true);
+        if (tar == 0) canvas.transform.Find("Panel_Edit").gameObject.SetActive(true);
         if (tar == 1) canvas.transform.Find("Panel_Generate").gameObject.SetActive(true);
         if (tar == 2) canvas.transform.Find("Panel_Simulate").gameObject.SetActive(true);
     }
 
     public void restartScene() {
         Application.LoadLevel(Application.loadedLevel);
+        Generator.forcebreak = true;
     }
 }

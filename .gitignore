@@ -7,5 +7,7 @@ Temp/*
 obj/*
 Exe/*
 bkup/*
-inputSet/*.obj
-csgcommandlinetool/*_*
+inputSet/**/inputObj/*
+csgcommandlinetool/pool/*_*
+csgcommandlinetool/*.bat
+csgcommandlinetool/*.txt

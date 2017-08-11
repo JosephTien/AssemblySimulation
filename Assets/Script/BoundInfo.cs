@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using UnityEngine;
 public class BoundInfo : MonoBehaviour
 {
+    public bool test = false;
     public bool isvert = false;
     public int solved = 2;
     public bool showstate = false;
@@ -17,6 +18,7 @@ public class BoundInfo : MonoBehaviour
     public Vector3 axis;
     public Vector3 initNorm;
     public Vector3 curNorm;
+    public Vector3 curDir;//not used
     public Quaternion curRot;
     public float angle = 0;
     public float len = 20;
@@ -49,18 +51,43 @@ public class BoundInfo : MonoBehaviour
     // Use this for initialization
     public void rotateTo(Vector3 to)
     {
-        curNorm = to;
-        angle = Vector3.Angle(initNorm, to);
+        curDir = to;
+        curNorm = Tool.calPerpend(axis, curDir);
+        angle = Vector3.Angle(initNorm, curNorm);
         curRot = Quaternion.AngleAxis(angle, axis);
-        if (Vector3.Dot(axis, Vector3.Cross(initNorm, to)) < 0 || angle >= 180) angle = 180 - angle;
+        //if (Vector3.Dot(axis, Vector3.Cross(initNorm, to)) < 0 || angle >= 180) angle = 180 - angle;
+        if (Vector3.Dot(axis, Vector3.Cross(initNorm, curNorm)) < 0)
+        {
+            angle = 180 - angle;
+            curNorm *= -1;
+            //curDir *= -1;//沒用，因為雙重方向需要另外定義
+        }
     }
+    public bool reversed = false;
+    public void rotateTo(Vector3 to, out bool reverse)
+    {
+        curDir = to;
+        curNorm = Tool.calPerpend(axis, curDir);
+        angle = Vector3.Angle(initNorm, curNorm);
+        if (Vector3.Dot(axis, Vector3.Cross(initNorm, curNorm)) < 0)
+            reversed = reverse = true;
+        else
+            reversed = reverse = false;
+        if (reverse) {
+            angle = 180 - angle;
+            curNorm *= -1;
+            //curDir *= -1;//沒用，因為雙重方向需要另外定義
+        }
+        curRot = Quaternion.AngleAxis(angle, axis);
+    }
+
     public void rotateTo(float angle)
     {
         if (angle >= 180) angle = angle - 180;
         if (angle < 0) angle = 180 + angle;
         this.angle = angle;
         curRot = Quaternion.AngleAxis(angle, axis);
-        curNorm = (curRot * initNorm).normalized;
+        curDir = curNorm = (curRot * initNorm).normalized;
     }
     public void rotateAssisPlane()
     {
@@ -429,7 +456,7 @@ public class BoundInfo : MonoBehaviour
         }
         return rtn;
     }
-    public float vec2anglearg(Vector3 norm, Vector3 vec, out float angle2, out float angle3)
+    public float vec2anglearg(Vector3 norm, Vector3 vec, out float angle2, out float angle3)//注意使用方式，vec需翻轉到norm所在平面//angle可能為負的，並不預期180循環
     {
         norm = Vector3.Cross(axis, Vector3.Cross(norm, axis));
         float angle = Vector3.Angle(initNorm, norm);
@@ -439,13 +466,16 @@ public class BoundInfo : MonoBehaviour
         angle2 = Vector3.Angle(cmptar, vec);
         if (Vector3.Dot(Vector3.Cross(cmptar, vec), Vector3.Cross(cmptar, axis)) < 0) angle = -angle;
         angle3 = Vector3.Angle(norm, cmptar);
-        if (Vector3.Dot(Vector3.Cross(norm, cmptar), axis) < 0) angle = - angle;
+        if (Vector3.Dot(Vector3.Cross(norm, cmptar), axis) < 0) angle3 = - angle3;
         return angle;
     }
 
+    public Vector3 anglearg2vec(float angle2, float angle3)
+    {
+        return anglearg2vec(axis, curNorm, angle2, angle3);
+    }
 
-
-    public static Vector3 anglearg2vec(Vector3 axis, Vector3 testNorm , float angle2, float angle3)
+    public static Vector3 anglearg2vec(Vector3 axis, Vector3 testNorm , float angle2, float angle3)//注意逆向的用法:保持norm不變，反轉結果
     {
         Vector3 axis2 = Vector3.Cross(testNorm, axis).normalized;
         Vector3 direction = Quaternion.AngleAxis(angle3, axis) * (Quaternion.AngleAxis(angle2, axis2) * testNorm);
@@ -491,7 +521,15 @@ public class AngleArg {
         angle2_2 = a2_2;
         angle3_2 = a3_2;
     }
+    public bool noAngleDefine() {
+        return angle2 == 0 && angle3 == 0 && angle2_2 == 0 && angle3_2 == 0;
+    }
+    public bool hasDirDefine()
+    {
+        return dir1 != null && dir2 != null;
+    }
     public Vector3 norm;
     public Vector3 axis;
-    public float angle2, angle3, angle2_2, angle3_2;   
+    public float angle2, angle3, angle2_2, angle3_2;
+    public Vector3 dir1, dir2;
 }

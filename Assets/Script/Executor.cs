@@ -76,6 +76,8 @@ public class Executor : MonoBehaviour
         //CMD.StandardInput.WriteLine("del pool\\"+name+".obj");
         Bath.Add("del pool\\" + name + ".obj");
     }
+
+    
     public static void flushBath() {
         StringBuilder sb = new StringBuilder();
         foreach (string str in Bath) {
@@ -87,6 +89,43 @@ public class Executor : MonoBehaviour
             sw.Write(sb.ToString());
         }
     }
+
+    public static void flushCSG_advance()
+    {
+        StringBuilder sb = new StringBuilder();
+        foreach (GameObject go in Generator.Samples)
+        {
+            sb.Append("LOAD " + go.name + "\n");
+        }
+        foreach (MeshComponent mc in Pool.list)
+        {
+            if (mc.tfa != null)
+            {
+                string ori = mc.Name.Split('_')[0];
+                sb.Append("COPY " + mc.Name + " " + ori + "\n");
+                /*
+                sb.Append("FORM-VEC " + mc.Name + " " + mc.Name + " " + mc.tfa.scale.x + " " + mc.tfa.scale.y + " " + mc.tfa.scale.z + " "
+                                                                  + mc.tfa.trans.x + " " + mc.tfa.trans.y + " " + mc.tfa.trans.z + " "
+                                                                  + mc.tfa.up.x + " " + mc.tfa.up.y + " " + mc.tfa.up.z + " "
+                                                                  + mc.tfa.forw.x + " " + mc.tfa.forw.y + " " + mc.tfa.forw.z + " " + "\n");
+                */
+                sb.Append("FORM " + mc.Name + " " + mc.Name + " " + mc.tfa.scale.x + " " + mc.tfa.scale.y + " " + mc.tfa.scale.z + " "
+                                                                  + mc.tfa.trans.x + " " + mc.tfa.trans.y + " " + mc.tfa.trans.z + " "
+                                                                  + mc.tfa.rot.x + " " + mc.tfa.rot.y + " " + mc.tfa.rot.z + " " + "\n");
+            }
+        }
+        foreach (string str in CSG)
+        {
+            string cs = str.Split(' ')[0];
+            if (cs != "LOAD") sb.Append(str + "\n");
+        }
+        string filename = exePath + "script2.txt";
+        using (StreamWriter sw = new StreamWriter(filename))
+        {
+            sw.Write(sb.ToString());
+        }
+    }
+
     public static void flushCSG()
     {
         StringBuilder sb = new StringBuilder();

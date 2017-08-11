@@ -3,7 +3,14 @@ using System.Collections.Generic;
 using UnityEngine;
 using System.IO;
 using System.Text;
-
+public class HoleInfo {
+    public HoleInfo(int idx, Vector3 dir) {
+        this.idx = idx;
+        this.dir = dir;
+    }
+    public int idx;
+    public Vector3 dir;
+}
 public class Bounding : MonoBehaviour {
     public static BoundInfo[] boundInfo;
     public static bool valid = false;
@@ -24,6 +31,8 @@ public class Bounding : MonoBehaviour {
     public static int[] compIdx_vert;
     DataEditor dataEditor;
     public static GroupInfo[] groupInfo;
+    public static List<HoleInfo> holeInfos = new List<HoleInfo>();
+    GameObject holeTube;
     /**/
     void addSelectVert(int vert) {
         selectedVert.Remove(vert);
@@ -334,37 +343,54 @@ public class Bounding : MonoBehaviour {
     }
 
     public void assignSplitInfo() {
-        for (int i = 0;i < ThinStructure.edgeNum; i++){ 
+
+        for (int i = 0;i < ThinStructure.edgeNum; i++){
             ThinStructure.splitNorms[i] = boundInfo[i].curNorm;
         }
         foreach (GroupInfo gi in groupInfo) {
             foreach (int e in gi.edge)
             {
-                ThinStructure.angleArgs[e] = new AngleArg(gi.curAngle2, gi.curAngle3, gi.curAngle2_2, gi.curAngle3_2);
+                //ThinStructure.angleArgs[e] = new AngleArg(gi.curAngle2, gi.curAngle3, gi.curAngle2_2, gi.curAngle3_2);
+
+                //float angle2, angle3, angle2_2, angle3_2;
+                //boundInfo[e].vec2anglearg(boundInfo[e].curNorm, gi.curDir, out angle2, out angle3);
+                //boundInfo[e].vec2anglearg(boundInfo[e].curNorm, -gi.curDir2, out angle2_2, out angle3_2);//注意使用方式，需翻轉到norm所在平面，或翻轉norm
+                //ThinStructure.angleArgs[e] = new AngleArg(angle2, angle3, angle2_2, angle3_2);
+                ThinStructure.angleArgs[e].dir1 = gi.curDir;
+                ThinStructure.angleArgs[e].dir2 = gi.curDir2;
             }
         }
     }
 
     public void writeGroupInfo() {
         StringBuilder sb = new StringBuilder();
-        for(int i = 0; i < ThinStructure.verticeNum; i++) { 
-            if (groupInfo[compIdx_vert[i]].isChild)
+        for(int i = 0; i < ThinStructure.verticeNum; i++) {
+            GroupInfo gi = groupInfo[compIdx_vert[i]];
+            if (gi.isChild && gi.nodeidx!=-1)
             {
-                sb.Append(string.Format("{0}\n", groupInfo[compIdx_vert[i]].transform.parent.name.Split('_')[1]));
+                int g = int.Parse(gi.transform.parent.name.Split('_')[1]);
+                sb.Append(string.Format("{0} {1}\n", g * 2, g * 2 + 1));
             }
             else {
-                sb.Append(string.Format("-1\n"));
+                sb.Append(string.Format("-1 -1\n"));
             }
         }
         for (int i = 0; i < ThinStructure.edgeNum; i++)
         {
-            if (groupInfo[compIdx[i]].isChild)
+            GroupInfo gi = groupInfo[compIdx[i]];
+            if (gi.isChild)
             {
-                sb.Append(string.Format("{0}\n", groupInfo[compIdx[i]].transform.parent.name.Split('_')[1]));
+                Vector3 mainNorm = gi.transform.parent.GetComponent<GroupInfo>().mainNorm;
+                int g = int.Parse(gi.transform.parent.name.Split('_')[1]);
+                BoundInfo bi = boundInfo[i];
+                if (Vector3.Dot(mainNorm, bi.curNorm) >= 0)
+                    sb.Append(string.Format("{0} {1}\n", g * 2, g * 2 + 1));
+                else
+                    sb.Append(string.Format("{0} {1}\n", g * 2 + 1, g * 2));            
             }
             else
             {
-                sb.Append(string.Format("-1\n"));
+                sb.Append(string.Format("-1 -1\n"));
             }
         }
         string filename = "inputSet\\" + ThinStructure.curSet + "\\input\\groupinfo.txt";
@@ -374,9 +400,42 @@ public class Bounding : MonoBehaviour {
         }
     }
 
+    public void writeholeinfo(){
+        StringBuilder sb = new StringBuilder();
+        
+        sb.Append(holeInfos.Count + "\n");
+        foreach(HoleInfo hi in holeInfos)
+        {
+            sb.Append(string.Format("{0} {1} {2} {3}\n",hi.idx, hi.dir.x, hi.dir.y, hi.dir.z));
+        }
+        string filename = "inputSet\\" + ThinStructure.curSet + "\\input\\holeinfo.txt";
+        using (StreamWriter sw = new StreamWriter(filename))
+        {
+            sw.Write(sb.ToString());
+        }
+    }
+    public static void readholeinfo()
+    {
+        string filename = "inputSet\\" + ThinStructure.curSet + "\\input\\holeinfo.txt";
+        System.IO.StreamReader file = new System.IO.StreamReader(filename);
+        string line;
+        string[] items;
+        int cnt;
+        line = file.ReadLine();
+        cnt = int.Parse(line);
+        holeInfos = new List<HoleInfo>();
+        while (!file.EndOfStream)
+        {
+            line = file.ReadLine();
+            items = line.Split(' ');
+            if (items.Length <= 1) { continue; }
+            holeInfos.Add(new HoleInfo(int.Parse(items[0]), new Vector3(float.Parse(items[1]), float.Parse(items[2]), float.Parse(items[3]))));
+        }
+        file.Close();
+    }
+
     public void writeInfo()
     {
-
         ThinStructure.outputsplitNorms(ThinStructure.curSet);
         ThinStructure.linkInfo = new HashSet<int>[ThinStructure.verticeNum];
         for (int i = 0; i < ThinStructure.verticeNum; i++) { ThinStructure.linkInfo[i] = new HashSet<int>(); }
@@ -417,7 +476,9 @@ public class Bounding : MonoBehaviour {
             sw.Write(sb.ToString());
         }
         /*************************************************/
+        collectToGroup();
         writeGroupInfo();
+        writeholeinfo();
     }
 
     public void writeInfoFromGroup() {
@@ -458,6 +519,7 @@ public class Bounding : MonoBehaviour {
         }
         /*************************************************/
         writeGroupInfo();
+        writeholeinfo();
     }
 
     // Use this for initialization
@@ -1027,7 +1089,34 @@ public class Bounding : MonoBehaviour {
             targi.tuneRotate(true, targi.curAngle2_2, targi.curAngle3_2 - 5);
         if (groupMode && Input.GetKeyUp(KeyCode.M) && selectedGroup != -1) {
             targi.mergeNeighborCurve();
-
+        }
+        if (Input.GetKeyUp(KeyCode.N))
+        {
+            Ray ray = Camera.main.ScreenPointToRay(Input.mousePosition);
+            RaycastHit hit;
+            if (Physics.Raycast(ray, out hit, 10000))
+            {
+                BoundInfo bi = hit.collider.gameObject.GetComponentInChildren<BoundInfo>();
+                if (bi.isvert) {
+                    bool isin = false;
+                    HoleInfo hi = new HoleInfo(bi.idx, Tool.randomVector());
+                    foreach (HoleInfo hii in holeInfos) {
+                        if (hii.idx == bi.idx) {
+                            isin = true;
+                            hii.dir = hi.dir;
+                            break;
+                        }
+                    }
+                    if (!isin) {
+                        holeInfos.Add(hi);
+                    }
+                    if (holeTube) Destroy(holeTube);
+                    Vector3 pos = ThinStructure.vertices[bi.idx];
+                    holeTube = Tool.DrawLine(pos, pos + hi.dir * 100, 5, Color.yellow);
+                    holeTube.transform.parent = GameObject.Find("Assist").transform;
+                    print(holeInfos.Count);
+                }
+            }
         }
 
         /***********************************************************************************/

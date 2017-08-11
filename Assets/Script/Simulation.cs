@@ -92,7 +92,7 @@ public class Simulation : MonoBehaviour {
         int lastsort = -1;
         foreach (Simulator sim in simulators)
         {
-            if(sim.sort != lastsort)yield return new WaitForSeconds(timing);
+            if (lastsort!=-1 && sim.sort != lastsort) yield return new WaitForSeconds(timing);
             if (sim.direction == Vector3.zero) continue;
             else sim.startmove();
             lastsort = sim.sort;
