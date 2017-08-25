@@ -517,12 +517,36 @@ public class Generator : MonoBehaviour {
             print("bad number");
             return;
         }
+        cavemode = 1;
+        genTest();
+    }
+    public void start2()
+    {
+        reset();
+        GameObject.Find("Canvas/Text").GetComponent<UnityEngine.UI.Text>().text = "";
+        try
+        {
+            string inputtext = GameObject.Find("Canvas/InputField_Input/Text").GetComponent<UnityEngine.UI.Text>().text;
+            string[] inputtexts = inputtext.Split('*');
+            if (inputtexts.Length > 1) ThinStructure.myscale = int.Parse(inputtexts[1]);
+            tarSet = int.Parse(inputtexts[0]);
+            addSample();
+        }
+        catch
+        {
+            print("bad number");
+            return;
+        }
+        cavemode = 2;
         genTest();
     }
     bool geninside = true;
     bool cave = true;//cave inside or not (save time)
-    bool conn = true;//connector inside or not (save time)
-    bool simple = false;
+    int cavemode = 1;
+    bool conn = false;//connector inside or not (save time)
+    bool simple = true;
+    bool track = false;
+    bool specialConn = true;
     void genTest() {
         /*
          * Comp :
@@ -535,9 +559,14 @@ public class Generator : MonoBehaviour {
         GameObject.Find("Canvas/Text").GetComponent<UnityEngine.UI.Text>().text = "Preparing...";
         GameObject Collect = GameObject.Find("Collect");
         ThinStructure.basicRead(tarSet);
+        /**/
+        //ThinStructure.reverseAllSplitNorm();
+        //ThinStructure.applyReverseSplitNorm();
+        /**/
+        recalVal();
         genThinComp();
         CSGQueue.addCSGSet("+", Complist[0].Name, Complist[0].Name, "null");
-        genAssemComps(false);
+        genAssemComps(0);
         collectComps();
         int childCount = Collect.transform.childCount;
         int compnum = childCount - 1;
@@ -550,9 +579,17 @@ public class Generator : MonoBehaviour {
         /**/
         if (cave)
         {
-            genAssemComps(true);
+            genAssemComps(1);
             collectComps();
             for (int i = 1 + compnum; i < childCount + compnum; i++)
+            {
+                //CSGMergeComp(i);
+                CSGMergeComp_NoCSG(i);
+                CSGQueue.addCSGSet("+", Complist[i].Name, Complist[i].Name, "null");
+            }
+            genAssemComps(2);
+            collectComps();
+            for (int i = 1 + compnum * 2; i < childCount + compnum * 2; i++)
             {
                 //CSGMergeComp(i);
                 CSGMergeComp_NoCSG(i);
@@ -565,34 +602,38 @@ public class Generator : MonoBehaviour {
                 genNull();
             }
         }
-        
+
         for (int i = 1; i < childCount; i++) {//產生connector，挖出內層
             genConn(i);
             if (conn) {
                 MeshComponent comp = Pool.list[Pool.find(Complist[i].Name)];//posorneg並未設定捷徑從complist取用
-                MeshComponent comp1 = Pool.list[Pool.find(Complist[(i - 1) * 2 + 1 + compnum * 2].Name)];
+
+                MeshComponent comp1 = Pool.list[Pool.find(Complist[(i - 1) * 2 + 1 + compnum * 3].Name)];
                 if (!comp1.isnull)
                 {
-                    if(comp1.posorneg)
-                        CSGQueue.addCSGSet("+", Complist[i].Name, Complist[i].Name, comp1.Name);
-                    else
-                        CSGQueue.addCSGSet("-", Complist[i].Name, Complist[i].Name, comp1.Name);
-                }
-                MeshComponent comp2 = Pool.list[Pool.find(Complist[(i - 1) * 2 + 1 + 1 + compnum * 2].Name)];
-                if (!comp2.isnull)
-                {
-                    if (comp2.posorneg)
+                    if (comp1.posorneg)
                         CSGQueue.addCSGSet("+", Complist[i].Name, Complist[i].Name, comp1.Name);
                     else
                         CSGQueue.addCSGSet("-", Complist[i].Name, Complist[i].Name, comp1.Name);
                 }
 
+                MeshComponent comp2 = Pool.list[Pool.find(Complist[(i - 1) * 2 + 1 + 1 + compnum * 3].Name)];
+                if (!comp2.isnull)
+                {
+                    if (comp2.posorneg)
+                        CSGQueue.addCSGSet("+", Complist[i].Name, Complist[i].Name, comp2.Name);
+                    else
+                        CSGQueue.addCSGSet("-", Complist[i].Name, Complist[i].Name, comp2.Name);
+                }
+
             }
+            /*事先挖空，包含是否使用加速方法
             if (cave && !(Complist[i].isSingleEdge() && singleEdgeSp))
             {
                 //CSGQueue.addCSGSet("-", Complist[i].Name, Complist[i].Name, Complist[0].Name);
                 CSGQueue.addCSGSet("-", Complist[i].Name, Complist[i].Name, Complist[i + compnum].Name);
             }
+            */
         }
         //挖洞
         Bounding.readholeinfo();
@@ -604,15 +645,16 @@ public class Generator : MonoBehaviour {
 
         for (int i = 1; i < childCount; i++)//產生knife
         {
-            genCut(i);
+            genCut(i, false);
         }
-        for (int i = 1; i < childCount; i++)//產生knifefix
+        for (int i = 1; i < childCount; i++)//產生knifetrack
         {
-            genCutFix(i);
+            genCutTrack(i);
         }
+        /*事先挖空，包含是否使用加速方法
         for (int i = 1; i < childCount; i++)//copy並使用knife
         {
-            if (Complist[i].isSingleEdge()&& singleEdgeSp)
+            if (Complist[i].isSingleEdge() && singleEdgeSp)
             {
                 Complist[i].renewFile();
                 int e = -1;
@@ -622,21 +664,125 @@ public class Generator : MonoBehaviour {
             else
             {
                 copyComp(i);
-                if (!Pool.list[Pool.find(Complist[i + compnum * 5].Name)].isnull) {
-                    CSGQueue.addCSGSet("-", Complist[i + compnum * 4].Name, Complist[i + compnum * 4].Name, Complist[i + compnum * 5].Name);
+                if (!Pool.list[Pool.find(Complist[i + compnum * 5].Name)].isnull && track)
+                {
+                    //CSGQueue.addCSGSet("*", Complist[i + compnum * 4].Name, Complist[i + compnum * 5].Name, Complist[i + compnum * 5].Name);
+                    CSGQueue.addCSGSet("COPY", Complist[i + compnum * 4].Name, Complist[i + compnum * 5].Name, "");
                 }
                 CSGQueue.addCSGSet("*", Complist[i + compnum * 6].Name, Complist[i].Name, Complist[i + compnum * 4].Name);
                 CSGQueue.addCSGSet("-", Complist[i].Name, Complist[i].Name, Complist[i + compnum * 4].Name);
             }
         }
+        */
+        for (int i = 1; i < childCount; i++) copyComp(i);
+        for (int i = 1; i < childCount; i++) copyComp(i);
+        for (int i = 1; i < childCount; i++) {
+            if (!Pool.list[Pool.find(Complist[i + compnum * 6].Name)].isnull && track)
+            {
+                //CSGQueue.addCSGSet("*", Complist[i + compnum * 4].Name, Complist[i + compnum * 5].Name, Complist[i + compnum * 5].Name);
+                CSGQueue.addCSGSet("COPY", Complist[i + compnum * 5].Name, Complist[i + compnum * 6].Name, "");
+            }
+            CSGQueue.addCSGSet("*", Complist[i + compnum * 7].Name, Complist[i].Name, Complist[i + compnum * 5].Name);
+            CSGQueue.addCSGSet("-", Complist[i + compnum * 8].Name, Complist[i].Name, Complist[i + compnum * 5].Name);
+            if (cavemode == 1) {
+                CSGQueue.addCSGSet("-", Complist[i + compnum * 7].Name, Complist[i + compnum * 7].Name, Complist[i + compnum * 2].Name);
+                CSGQueue.addCSGSet("-", Complist[i + compnum * 8].Name, Complist[i + compnum * 8].Name, Complist[i + compnum * 2].Name);
+            }else if (cavemode == 2)
+            {
+                CSGQueue.addCSGSet("*", Complist[i + compnum].Name, Complist[i + compnum].Name, Complist[i].Name);
+                CSGQueue.addCSGSet("+", Complist[i + compnum * 7].Name, Complist[i + compnum * 7].Name, Complist[i + compnum].Name);
+                CSGQueue.addCSGSet("+", Complist[i + compnum * 8].Name, Complist[i + compnum * 8].Name, Complist[i + compnum].Name);
+            }
+
+
+        }
+        /**/
+        /*
         int n = GameObject.Find("Collect").transform.childCount;
         for (int i = 0; i < n; i++) {
-            //GameObject.Find("Collect").transform.GetChild(i).gameObject.SetActive(false);
+            GameObject.Find("Collect").transform.GetChild(i).gameObject.SetActive(false);
         }
+        */
         compNum = compnum;
+        /********************/
+        mergeGroup(compnum * 7);
         /********************/
         StartCoroutine(outputToSet());
         genOrderingInfo();
+    }
+
+    public void mergeGroup(int prefix1) {
+        int prefix2 = prefix1 + compNum;
+        List<int>[] grouplist = new List<int>[compNum * 2];
+        List<int> nogrouplist = new List<int>();
+        for (int i = 1 + prefix1; i < compNum + 1 + prefix1; i++)
+        {
+            MeshComponent mc = Complist[i - prefix1];
+            CompInfo ci = null;
+            if (mc.edges.Count >= 1)
+            {
+                foreach (int e in mc.edges)
+                {
+                    ci = ThinStructure.compinfo_edge[e];
+                    break;
+                }
+            }
+            else if (mc.vertices.Count == 1)
+            {
+                foreach (int v in mc.vertices)
+                {
+                    ci = ThinStructure.compinfo_vert[v];
+                    break;
+                }
+            }
+            int group = ci != null ? ci.group_u : -1;
+            if (group == -1) {
+                nogrouplist.Add(i);
+                continue;
+            }
+            if (grouplist[group] == null) grouplist[group] = new List<int>();
+            grouplist[group].Add(i);
+        }
+        
+        for (int i = 1 + prefix2; i < compNum + 1 + prefix2; i++)
+        {
+            MeshComponent mc = Complist[i-prefix2];
+            CompInfo ci = null;
+            if (mc.edges.Count >= 1)
+            {
+                foreach (int e in mc.edges)
+                {
+                    ci = ThinStructure.compinfo_edge[e];
+                    break;
+                }
+            }
+            else if (mc.vertices.Count == 1)
+            {
+                foreach (int v in mc.vertices)
+                {
+                    ci = ThinStructure.compinfo_vert[v];
+                    break;
+                }
+            }
+            int group = ci != null ? ci.group_d : -1;
+            if (group == -1) {
+                nogrouplist.Add(i);
+                continue;
+            }
+            if (grouplist[group] == null) grouplist[group] = new List<int>();
+            grouplist[group].Add(i);
+        }
+        int groupnum = 0;
+        for (; grouplist[groupnum] != null; groupnum++) ;
+        for (int i = 0; i < groupnum; i++) {
+            mergeSomeComp(grouplist[i]);
+        }
+        foreach(int tar in nogrouplist)
+        {
+            GameObject Comp = genEmptyCollect();
+            GameObject go = copyCompTo(tar, curComp-1);
+            Complist[curComp-1] = Pool.list[Pool.find(go.name)];
+        }
     }
 
     public void btn_outputToSet() {
@@ -644,7 +790,6 @@ public class Generator : MonoBehaviour {
         StartCoroutine(outputToSet());
         genOrderingInfo();
     }
-
 
     public static void showObject(string name, bool state) {
         GameObject go = Pool.list[Pool.find(name)].Instance;
@@ -665,18 +810,24 @@ public class Generator : MonoBehaviour {
 
         GameObject.Find("Canvas/Text").GetComponent<UnityEngine.UI.Text>().text = "Writing...";
         Executor.clearInputSet(tarSet);
-        
+
         Executor.mkObjDir(tarSet);
         Executor.cpoyObjFileInPoolToInputSet(Complist[0].Name, tarSet, "output_0");
-        int cnt=0;
+
+        int prefix1 = compNum * 7;
+        int prefix2 = compNum * 8;
+        int cnt = 0;
         for (int i = 1; i < compNum + 1; i++)
         {
             //Executor.cpoyObjFileInPoolToInputSet(Complist[i].Name,tarSet, "output_"+i);
-            Executor.cpoyObjFileInPoolToInputSet(Complist[i].Name, tarSet, "output_" + (cnt + 1));
+            Executor.cpoyObjFileInPoolToInputSet(Complist[i + prefix1].Name, tarSet, "output_" + (cnt + 1));
             cnt++;
             //Executor.cpoyObjFileInPoolToInputSet(Complist[i+ compNum*3].Name, tarSet, "output_" + (i+ compNum));
-            Executor.cpoyObjFileInPoolToInputSet(Complist[i + compNum * 6].Name, tarSet, "output_" + (cnt + 1));
+            Executor.cpoyObjFileInPoolToInputSet(Complist[i + prefix2].Name, tarSet, "output_" + (cnt + 1));
             cnt++;
+        }
+        for (int i = prefix2 + compNum+1; i < curComp; i++) {
+            Executor.cpoyObjFileInPoolToInputSet(Complist[i].Name, tarSet, "3dp_" + (i-(prefix2 + compNum)));
         }
         Executor.flushBath();
         GameObject.Find("Canvas/Text").GetComponent<UnityEngine.UI.Text>().text = "Done!";
@@ -689,21 +840,6 @@ public class Generator : MonoBehaviour {
                 Executor.flushCSG_advance();
             }
             GameObject.Find("Canvas/Text").GetComponent<UnityEngine.UI.Text>().text = "Need Manual Scripting!";
-        }
-        
-        
-        for (int i = 1; i < compNum+1; i++)
-        {
-            GameObject go1 = GameObject.Find("Collect").transform.Find("Comp_" + i).gameObject;
-            GameObject go2 = GameObject.Find("Collect").transform.Find("Comp_" + (i + compNum * 3)).gameObject;
-            GameObject go3 = GameObject.Find("Collect").transform.Find("Comp_" + (i + compNum * 1)).gameObject;
-            GameObject go4 = GameObject.Find("Collect").transform.Find("Comp_" + (i + compNum * 2)).gameObject;
-            go1.SetActive(true);
-            go1.transform.GetChild(go1.transform.childCount - 1).gameObject.SetActive(true);
-            go2.SetActive(true);
-            go2.transform.GetChild(go2.transform.childCount - 1).gameObject.SetActive(true);
-            go3.SetActive(false);
-            go4.SetActive(false);
         }
     }
 
@@ -742,7 +878,7 @@ public class Generator : MonoBehaviour {
                     cnt++;
                 }
             }
-            
+
         }
         genOrdering(compIdxs, dirs);
     }
@@ -756,9 +892,9 @@ public class Generator : MonoBehaviour {
         for (int i = 0; i < compIdxs.Length; i++)
         {
             //MeshComponent mc = Pool.list[Pool.find("comp_" + compIdxs[i])];
-            int idx = compIdxs[i]>0? compIdxs[i]:-compIdxs[i];
+            int idx = compIdxs[i] > 0 ? compIdxs[i] : -compIdxs[i];
             MeshComponent mc = Pool.list[Pool.find(Complist[idx].Name)];
-            CompInfo ci=null;
+            CompInfo ci = null;
             if (mc.edges.Count >= 1)
             {
                 foreach (int e in mc.edges)
@@ -775,8 +911,8 @@ public class Generator : MonoBehaviour {
                     break;
                 }
             }
-            
-            if (ci!=null){
+
+            if (ci != null) {
                 int g = -1;
                 if (compIdxs[i] > 0)
                 {
@@ -835,20 +971,18 @@ public class Generator : MonoBehaviour {
             Pool.addPool("column").Instance,
             Pool.addPool("halftube").Instance,
             Pool.addPool("finesphere").Instance,
-            Pool.addPool("finecylinder").Instance};
+            Pool.addPool("finecylinder").Instance,
+            Pool.addPool("track").Instance,
+            Pool.addPool("roundtrack").Instance,
+            Pool.addPool("connector").Instance};
         Generator.Samples = Samples;
         //GameObject obj = GameObject.Instantiate(Resources.Load("Comp"), Vector3.zero, Quaternion.identity) as GameObject;
         //obj.name = "Sample";
         //obj.transform.parent = GameObject.Find("Sample").transform;
         GameObject obj = GameObject.Find("Sample");
-        Samples[0].transform.parent = obj.transform; Samples[0].SetActive(false);
-        Samples[1].transform.parent = obj.transform; Samples[1].SetActive(false);
-        Samples[2].transform.parent = obj.transform; Samples[2].SetActive(false);
-        Samples[3].transform.parent = obj.transform; Samples[3].SetActive(false);
-        Samples[4].transform.parent = obj.transform; Samples[4].SetActive(false);
-        Samples[5].transform.parent = obj.transform; Samples[5].SetActive(false);
-        Samples[6].transform.parent = obj.transform; Samples[6].SetActive(false);
-        Samples[7].transform.parent = obj.transform; Samples[7].SetActive(false);
+        for (int i = 0; i < 11; i++) {
+            Samples[i].transform.parent = obj.transform; Samples[i].SetActive(false);
+        }
     }
 
     int CSGMergeComp_NoCSG(int tar) {
@@ -880,7 +1014,7 @@ public class Generator : MonoBehaviour {
             tricnt += mfs[i].mesh.triangles.Length;
         }
         int[] triangles = new int[tricnt];
-        int triflag=0;
+        int triflag = 0;
         tail = 0;
         for (int n = 0; n < mfs.Length; n++)
         {
@@ -912,7 +1046,8 @@ public class Generator : MonoBehaviour {
 
     GameObject CSGMergeComp(int tar)//精簡版 // return root;
     {
-        GameObject comp = GameObject.Find("Collect/Comp_" + tar);
+        GameObject comp = findComp(tar);
+        if (!comp) comp = GameObject.Find("Collect/Comp_" + tar + "_");
         int childCount = comp.transform.childCount;
         if (childCount == 0) {
             MeshComponent temp = Pool.addPool("cube");
@@ -1007,6 +1142,12 @@ public class Generator : MonoBehaviour {
         GameObject.Destroy(Comp);
     }
 
+    GameObject findComp(int tar) {
+        GameObject comp = GameObject.Find("Collect/Comp_" + tar);
+        if (!comp) comp = GameObject.Find("Collect/Comp_" + tar + "_");
+        return comp;
+    }
+
     GameObject copyCompByInst(int tar, Quaternion rotation)
     {
         GameObject Comp = GameObject.Instantiate(Resources.Load("Comp"), Vector3.zero, Quaternion.identity) as GameObject;
@@ -1022,7 +1163,6 @@ public class Generator : MonoBehaviour {
         Complist[newtar] = mc;
         return mc.Instance;
     }
-
     GameObject copyComp(int tar)
     {
         GameObject Comp = GameObject.Instantiate(Resources.Load("Comp"), Vector3.zero, Quaternion.identity) as GameObject;
@@ -1036,99 +1176,178 @@ public class Generator : MonoBehaviour {
         CSGQueue.addCSGSet("COPY", "comp_" + newtar, Complist[tar].Name, "");
         return mc.Instance;
     }
+    GameObject copyCompTo(int tar, int newtar)
+    {
+        GameObject Comp = GameObject.Find("Comp_" + newtar);
+        GameObject Inst = Instantiate(Complist[tar].Instance, Comp.transform);
+        int childnum = Comp.transform.childCount;
+        string name = "comp_" + newtar + "_" + childnum;
+        MeshComponent mc = new MeshComponent(name, Inst);
+        Pool.list.Add(mc);
+        CSGQueue.addCSGSet("COPY", name, Complist[tar].Name, "");
+        return mc.Instance;
+    }
 
-    MeshComponent addCompToPool(int type, int idx) {
+    MeshComponent addCompToPool(int type, int idx, int addType) {
         /*
-         * type0 : node;
-         * type1 : edge;
+         * addType : node;
+         * addType : edge;
          */
+        MeshComponent comp = null;
         if (type == 0)
         {
-            MeshComponent comp = Pool.addPool("sphere");
-            if (idx >= 0) Pool.list[Pool.find(comp.Name)].vertices.Add(idx);
-            return comp;
+            comp = Pool.addPool("sphere");
         }
         else if (type == 1)
         {
-            MeshComponent comp = Pool.addPool("cylinder");
-            if (idx >= 0) Pool.list[Pool.find(comp.Name)].edges.Add(idx);
-            return comp;
+            comp = Pool.addPool("cylinder");
         }
         else if (type == 11)
         {
-            MeshComponent comp = Pool.addPool("halftube");
-            if (idx >= 0) Pool.list[Pool.find(comp.Name)].edges.Add(idx);
-            return comp;
+            comp = Pool.addPool("halftube");
         }
         else if (type == 2)
         {
-            MeshComponent comp = Pool.addPool("column");
-            if (idx >= 0) Pool.list[Pool.find(comp.Name)].edges.Add(idx);
-            return comp;
+            comp = Pool.addPool("column");
         }
         else if (type == 3)
         {
-            MeshComponent comp = Pool.addPool("cube");
-            if (idx >= 0) Pool.list[Pool.find(comp.Name)].edges.Add(idx);
-            return comp;
+            comp = Pool.addPool("cube");
         }
         else if (type == 20)
         {
-            MeshComponent comp = Pool.addPool("finesphere");
-            if (idx >= 0) Pool.list[Pool.find(comp.Name)].edges.Add(idx);
-            return comp;
+            comp = Pool.addPool("finesphere");
         }
         else if (type == 21)
         {
-            MeshComponent comp = Pool.addPool("finecylinder");
-            if (idx >= 0) Pool.list[Pool.find(comp.Name)].edges.Add(idx);
-            return comp;
+            comp = Pool.addPool("finecylinder");
         }
         else {
-
+            comp = Pool.addPool("null");
+            comp.isnull = true;
         }
-        return null;
+        if (addType == 0)
+        {
+            if (idx >= 0) Pool.list[Pool.find(comp.Name)].vertices.Add(idx);
+        }
+        else if (addType == 1)
+        {
+            if (idx >= 0) Pool.list[Pool.find(comp.Name)].edges.Add(idx);
+        }
+        return comp;
     }
 
     /**********************************************************************************************************************************************/
     /**********************************************************************************************************************************************/
     /**********************************************************************************************************************************************/
-
+    static float hR = 0.14f;
     static float iR = 0.1f;
-    //static float oR = 0.2f;
-    static float oR = 0.3f;
-    static float ioR = (iR + oR) / 2;
+    static float oR = 0.5f;
+    static float oRold = oR;
+    static float cR = (oR + iR) / 2;
+    static float ccR = (cR + iR) / 2;
     static float mul = 50;
     static float iRreal = iR * mul;
     static float oRreal = oR * mul;
-    static float ioRreal = ioR * mul;
-    static float reachLen = iRreal;
-    void genAssemComps(bool thin)//尚未考慮fix很小(甚至於負數)的時候
+    static float oRoldreal = oRold * mul;
+    static float cRreal = cR * mul;
+    static float ccRreal = ccR * mul;
+    static float reachLen = cRreal;
+
+    void recalVal() {
+        if (simple)
+        {
+            oRold = oR;
+            oRoldreal = oRold * mul;
+            oR /= Mathf.Sqrt(2);
+            oRreal = oR * mul;
+            cR = (oR + iR) / 2;
+            ccR = (cR + iR) / 2;
+            cRreal = cR * mul;
+            ccRreal = ccR * mul;
+            reachLen = cRreal;
+        }
+    }
+    void genAssemComps(int type)//尚未考慮fix很小(甚至於負數)的時候
     {
         int columntype = simple ? 3 : 1;
+        //int columntype2 = 1;
         float R = oR;
         float Rreal = oRreal;
         float littlescale = 1.0001f;
-        if (thin) {
+        bool ex = false;
+        bool thin = false;
+        if (type == 1) {
             columntype = 21;
             R = iR;
             Rreal = iRreal;
+            ex = true;
+            thin = true;
         }
-        
-         MeshComponent[] edgeInstance = new MeshComponent[ThinStructure.edgeNum];
+        else if (type == 2)
+        {
+            columntype = 21;
+            R = cR;
+            Rreal = cRreal;
+            ex = true;
+            thin = true;
+        }
+
+        MeshComponent[] edgeInstance = new MeshComponent[ThinStructure.edgeNum];
         for (int i = 0; i < edgeInstance.Length; i++) edgeInstance[i] = null;
         for (int i = 0; i < ThinStructure.verticeNum; i++)
         {
             int thisvert = i;
             //MeshComponent thisvertInstance = Pool.addPool("sphere");
-            MeshComponent thisvertInstance;
-            if (!thin) thisvertInstance = addCompToPool(0, thisvert);
-            else thisvertInstance = addCompToPool(20, thisvert);
+            MeshComponent thisvertInstance = null;
+            Vector3 vertforw = new Vector3(0, 0, 1);
+            Vector3 vertup = new Vector3(0, 1, 0);
+            if (!thin) {
+                int ea = -1, eb = -1;
+                foreach (int en in ThinStructure.verticesedges[i])
+                {
+                    if (ea == -1) ea = en;
+                    else if (eb == -1) eb = en;
+                }
+                //if (ThinStructure.verticesedges[i].Count == 1 && simple)
+                if (ThinStructure.verticesedges[i].Count == 1)
+                {
+                    thisvertInstance = addCompToPool(1, thisvert, 0);
+                    vertforw = ThinStructure.splitNorms[ea];
+                    vertup = ThinStructure.edges[ea].vec;
+                }
+                //else if (ThinStructure.verticesedges[i].Count == 2 && simple) {
+                else if (ThinStructure.verticesedges[i].Count == 2)
+                {
+                    thisvertInstance = addCompToPool(1, thisvert, 0);
+                    vertforw = Vector3.Cross(ThinStructure.edges[ea].vec, ThinStructure.edges[eb].vec);
+                    vertup = Tool.calPerpend(vertup, (ThinStructure.edges[ea].vec + ThinStructure.edges[eb].vec) / 2);
+                    if (vertforw.magnitude < 0.01)
+                    {
+                        vertforw = ThinStructure.splitNorms[ea];
+                        vertup = Tool.calPerpend(vertup, Tool.randomVector());
+                    }
+                }
+                else if (ThinStructure.verticesedges[i].Count == 3)
+                {
+                    thisvertInstance = addCompToPool(1, thisvert, 0);
+                    List<Vector3> vecs = getNodeVecs(i);
+                    Algorithm.nodeNorms(vecs, i, ref vertforw);
+                    vertup = Tool.calPerpend(vertup, (ThinStructure.edges[ea].vec + ThinStructure.edges[eb].vec) / 2);
+                }
+                else
+                {
+                    thisvertInstance = addCompToPool(0, thisvert, 0);
+                }
+            }
+            else {
+                thisvertInstance = addCompToPool(20, thisvert, 0);
+            } 
             thisvertInstance.transform(
                 new Vector3(R, R, R),
                 ThinStructure.vertices[thisvert],
-                new Vector3(0, 0, 1),
-                new Vector3(0, 1, 0)
+                vertforw,
+                vertup
             );
             foreach (int edge in ThinStructure.verticesedges[thisvert])
             {
@@ -1141,11 +1360,11 @@ public class Generator : MonoBehaviour {
                 float angleFix1 = Algorithm.angleFix(edge, swap?1:0, Rreal);
                 float angleFix2 = Algorithm.angleFix(edge, swap?0:1, Rreal);
                 Vector3 p1 = ThinStructure.vertices[thisvert] + angleFix1 * n;
-                Vector3 p1_ = !thin ? p1 : v2;//製作thin的時候需要故意加長
+                Vector3 p1_ = !ex ? p1 : v2;//製作thin的時候需要故意加長
                 Vector3 p2 = ThinStructure.vertices[thisvert] + (len - angleFix2) * n;
                 if (!ThinStructure.linkInfo[thisvert].Contains(edge))
                 {
-                    MeshComponent columnInstance = addCompToPool(columntype, -1);
+                    MeshComponent columnInstance = addCompToPool(columntype, -1, 1);
                     columnInstance.transform(
                         new Vector3(R, R, (p1_ - v1).magnitude / (mul * 2) * littlescale),
                         (p1_ + v1) / 2,
@@ -1156,10 +1375,10 @@ public class Generator : MonoBehaviour {
                     {
                         MeshComponent indepClmnInstance;
                         if (!thin) {
-                            if(singleEdgeSp) indepClmnInstance = addCompToPool(11, edge);
-                            else indepClmnInstance = addCompToPool(columntype, edge);
+                            if(singleEdgeSp) indepClmnInstance = addCompToPool(11, edge, 1);
+                            else indepClmnInstance = addCompToPool(columntype, edge, 1);
                         } 
-                        else indepClmnInstance = addCompToPool(columntype, edge);
+                        else indepClmnInstance = addCompToPool(columntype, edge, 1);
                         indepClmnInstance.transform(
                             new Vector3(R, R, (p2 - p1).magnitude / (mul * 2) * littlescale),
                             (v1 + v2) / 2,
@@ -1174,7 +1393,7 @@ public class Generator : MonoBehaviour {
                 {
                     if (edgeInstance[edge] == null)
                     {
-                        MeshComponent columnInstance = addCompToPool(columntype, edge);
+                        MeshComponent columnInstance = addCompToPool(columntype, edge, 1);
                         if (!ThinStructure.linkInfo[thatvert].Contains(edge))
                         {
                             columnInstance.transform(
@@ -1297,6 +1516,7 @@ public class Generator : MonoBehaviour {
         MeshComponent comp = Pool.list[Pool.find(Complist[tar].Name)];
         int verticeCount = comp.vertices.Count;
         int edgeCount = comp.edges.Count;
+        /*
         if (edgeCount == 1)
         {
             foreach (int edge in comp.edges)
@@ -1305,7 +1525,9 @@ public class Generator : MonoBehaviour {
             }
             genNull();
         }
-        else if (edgeCount > 1)
+        else 
+        */
+        if (edgeCount >= 1)
         {
             int[] nodes = new int[comp.vertices.Count];
             int i = 0;
@@ -1327,6 +1549,42 @@ public class Generator : MonoBehaviour {
             print("conn space not contain : " + verticeCount + " / "+ edgeCount);
         }
     }
+    float connscale = 1f;
+    void genSpecConn(Vector3 cent,Vector3 vec, Vector3 norm, float len, GameObject Comp)
+    {
+        int type = 0;
+        if (type == 0)
+        {
+            float sR = (oR - iR) / 2;
+            Vector3 side = Vector3.Cross(vec, norm).normalized;
+            MeshComponent cube = Pool.addPool("cube");
+            cube.transform(
+                new Vector3(cR * connscale, oR / 2 * connscale, len / mul / 2),
+                cent - norm * oR * mul / 2,
+                vec,
+                norm
+            );
+            cube.Instance.transform.parent = Comp.transform;
+            cube = Pool.addPool("cube");
+            cube.transform(
+                new Vector3((sR / 2) * connscale, oR * connscale, len / mul / 2),
+                cent - side * (sR / 2 + iR + sR) * mul,
+                vec,
+                norm
+            );
+            cube.Instance.transform.parent = Comp.transform;
+        }
+        else if (type == 1) {
+            MeshComponent cube = Pool.addPool("cube");
+            cube.transform(
+                new Vector3(cR, oR, len / mul / 2),
+                cent,
+                vec,
+                norm
+            );
+            cube.Instance.transform.parent = Comp.transform;
+        }        
+    }
 
     void genCurveConn(int[] nodes) {//will gen two
         int cnt = 0;
@@ -1335,45 +1593,17 @@ public class Generator : MonoBehaviour {
             Vector3 pos = ThinStructure.vertices[node];
             foreach (int e in ThinStructure.verticesedges[node])
             {
-                int tarnodeidx = ThinStructure.edges[e].idx1 == node ? ThinStructure.edges[e].idx2 : node;
+                int tarnodeidx = ThinStructure.edges[e].idx1 == node ? ThinStructure.edges[e].idx2 : ThinStructure.edges[e].idx1;
                 bool isin = false;
                 foreach (int temp in nodes) {
                     if (temp == tarnodeidx) {
                         isin = true;
                         break;
                     }
-                } 
-                if (!isin) {
-                    GameObject Comp = genEmptyCollect();
-                    MeshComponent cube = Pool.addPool("cylinder");
-                    Edge edge = ThinStructure.edges[e];
-                    int evi1 = tarnodeidx;
-                    int evi2 = node;
-                    Vector3 v1 = ThinStructure.vertices[evi1];
-                    Vector3 v2 = ThinStructure.vertices[evi2];
-                    Vector3 vec = (v2 - v1).normalized;
-                    float fix = 0;
-                    if (evi1 == edge.idx1) fix = edge.fixDis1;
-                    if (evi1 == edge.idx2) fix = edge.fixDis2;
-                    v2 = v1 + vec * ((oRreal + reachLen) + fix);
-                    Vector3 cent = (v2 + v1) / 2;
-                    Vector3 norm = ThinStructure.splitNorms[e].normalized;
-                    float len = (v2 - v1).magnitude;
-                    cube.transform(
-                        new Vector3(ioR, ioR, len / mul / 2),
-                        cent,
-                        vec,
-                        norm
-                    );
-                    cube.Instance.transform.parent = Comp.transform;
-                    cnt++;
-                    GameObject go = CSGMergeComp(curComp - 1);
-                    Pool.list[Pool.find(go.name)].posorneg = false;
                 }
-                else if (!ThinStructure.linkInfo[node].Contains(e))
+                if (!ThinStructure.linkInfo[node].Contains(e))
                 {
                     GameObject Comp = genEmptyCollect();
-                    MeshComponent cube = Pool.addPool("cylinder");
                     Edge edge = ThinStructure.edges[e];
                     int evi1 = edge.idx1 == node ? edge.idx1 : edge.idx2;
                     int evi2 = edge.idx1 == node ? edge.idx2 : edge.idx1;
@@ -1383,20 +1613,83 @@ public class Generator : MonoBehaviour {
                     float fix = 0;
                     if (evi1 == edge.idx1) fix = edge.fixDis1;
                     if (evi1 == edge.idx2) fix = edge.fixDis2;
-                    v2 = v1 + vec * ((oRreal + reachLen) + fix);
+                    v2 = v1 + vec * (fix + reachLen);
+                    v1 = v1 + vec * (fix - reachLen);
                     Vector3 cent = (v2 + v1) / 2;
                     Vector3 norm = ThinStructure.splitNorms[e].normalized;
                     float len = (v2 - v1).magnitude;
+                    /***************/
+                    if (!specialConn)
+                    {
+                        string connType = (simple ? "cube" : "cylinder");
+                        MeshComponent cube = Pool.addPool(connType);
+                        cube.transform(
+                            new Vector3(cR, cR, len / mul / 2),
+                            cent,
+                            vec,
+                            norm
+                        );
+                        cube.Instance.transform.parent = Comp.transform;
+                    }
+                    else
+                    {
+                        connscale = 0.99f;
+                        genSpecConn(cent, vec, norm, len, Comp);
+                    }
+                    /**/
+                    cnt++;
+                    GameObject go = CSGMergeComp(curComp - 1);
+                    Pool.list[Pool.find(go.name)].posorneg = true;
+                }
+                else if (!isin) {
+                    GameObject Comp = genEmptyCollect();
+                    Edge edge = ThinStructure.edges[e];
+                    int evi1 = tarnodeidx;
+                    int evi2 = node;
+                    Vector3 v1 = ThinStructure.vertices[evi1];
+                    Vector3 v2 = ThinStructure.vertices[evi2];
+                    Vector3 vec = (v2 - v1).normalized;
+                    float fix = 0;
+                    if (evi1 == edge.idx1) fix = edge.fixDis1;
+                    if (evi1 == edge.idx2) fix = edge.fixDis2;
+                    v2 = v1 + vec * (fix + reachLen);
+                    v1 = v1 + vec * (fix - reachLen);
+                    Vector3 cent = (v2 + v1) / 2;
+                    Vector3 norm = ThinStructure.splitNorms[e].normalized;
+                    float len = (v2 - v1).magnitude;
+                    /*********************/
+                    /*
+                    string connType = specialConn ? "connector" : (simple ? "cube" : "cylinder");
+                    MeshComponent cube = Pool.addPool(connType);
                     cube.transform(
-                        new Vector3(ioR, ioR, len / mul / 2),
-                        cent,
+                        new Vector3(oR, oR, len / mul / 2),
+                        cent + norm * 0.0001f,
                         vec,
                         norm
                     );
                     cube.Instance.transform.parent = Comp.transform;
+                    */
+                    if (!specialConn)
+                    {
+                        string connType = (simple ? "cube" : "cylinder");
+                        MeshComponent cube = Pool.addPool(connType);
+                        cube.transform(
+                            new Vector3(cR, cR, len / mul / 2),
+                            cent,
+                            vec,
+                            norm
+                        );
+                        cube.Instance.transform.parent = Comp.transform;
+                    }
+                    else {
+                        connscale = 1.01f;
+                        genSpecConn(cent, vec, norm, len, Comp);
+                    }
+                    
+                    /**/
                     cnt++;
                     GameObject go = CSGMergeComp(curComp - 1);
-                    Pool.list[Pool.find(go.name)].posorneg = true;
+                    Pool.list[Pool.find(go.name)].posorneg = false;
                 }
             }
         }
@@ -1413,25 +1706,36 @@ public class Generator : MonoBehaviour {
         foreach (int e in ThinStructure.verticesedges[node])
         {
             if (ThinStructure.linkInfo[node].Contains(e)) return;
-            MeshComponent cube = Pool.addPool("cylinder");
             Edge edge = ThinStructure.edges[e];
             int evi1 = edge.idx1 == node ? edge.idx1 : edge.idx2;
             int evi2 = edge.idx1 == node ? edge.idx2 : edge.idx1;
             Vector3 v1 = ThinStructure.vertices[evi1];
             Vector3 v2 = ThinStructure.vertices[evi2];
             Vector3 vec = (v2 - v1).normalized;
-            float angleFix = edge.idx1 == node ? Algorithm.angleFix(e, 0, oRreal) : Algorithm.angleFix(e, 1, oRreal);
-            v2 = v1 + vec * (oRreal + reachLen + angleFix);
+            //float angleFix = edge.idx1 == node ? Algorithm.angleFix(e, 0, oRreal) : Algorithm.angleFix(e, 1, oRreal);
+            float angleFix = edge.idx1 == node ? edge.fixDis1 : edge.fixDis2;
+            v2 = v1 + vec * (angleFix + reachLen);
+            v1 = v1 + vec * (angleFix - reachLen);
             Vector3 cent = (v2 + v1) / 2;
             Vector3 norm = ThinStructure.splitNorms[e].normalized;
             float len = (v2 - v1).magnitude;
-            cube.transform(
-                new Vector3(ioR, ioR, len / mul / 2),
-                cent,
-                vec,
-                norm
-            );
-            cube.Instance.transform.parent = Comp.transform;
+            if (!specialConn)
+            {
+                string connType = (simple ? "cube" : "cylinder");
+                MeshComponent cube = Pool.addPool(connType);
+                cube.transform(
+                    new Vector3(cR, cR, len / mul / 2),
+                    cent,
+                    vec,
+                    norm
+                );
+                cube.Instance.transform.parent = Comp.transform;
+            }
+            else
+            {
+                connscale = 0.99f;
+                genSpecConn(cent, vec, norm, len, Comp);
+            }
         }
         GameObject go = CSGMergeComp(curComp - 1);
         Pool.list[Pool.find(go.name)].posorneg = true;
@@ -1448,40 +1752,58 @@ public class Generator : MonoBehaviour {
         Vector3 vec = (p2 - p1).normalized;
         float angleFix1 = Algorithm.angleFix(e, 0, oRreal);
         float angleFix2 = Algorithm.angleFix(e, 1, oRreal);
-        p2 = p1 + vec * (angleFix1 + (oRreal + reachLen));
-        p1 = p1 + vec * (angleFix1 - (oRreal + reachLen));
+        p2 = p1 + vec * (angleFix1 + reachLen);
+        p1 = p1 + vec * (angleFix1 - reachLen);
         Vector3 cent = (p2 + p1) / 2;
         Vector3 norm = ThinStructure.splitNorms[e].normalized;
         float len = (p2 - p1).magnitude;
         if (!ThinStructure.linkInfo[edge.idx1].Contains(e)) {
-            MeshComponent cylinder = Pool.addPool("cylinder");
-            cylinder.transform(
-                    new Vector3(ioR, ioR, len / mul / 2),
+            if (!specialConn)
+            {
+                string connType = (simple ? "cube" : "cylinder");
+                MeshComponent cube = Pool.addPool(connType);
+                cube.transform(
+                    new Vector3(cR, cR, len / mul / 2),
                     cent,
                     vec,
                     norm
                 );
-            cylinder.Instance.transform.parent = Comp.transform;
+                cube.Instance.transform.parent = Comp.transform;
+            }
+            else
+            {
+                connscale = 1.01f;
+                genSpecConn(cent, vec, norm, len, Comp);
+            }
         }
         //////////////////////////
         p1 = v2;
         p2 = v1;
         vec = (p2 - p1).normalized;
-        p2 = p1 + vec * (angleFix2 + iRreal);
-        p1 = p1 + vec * (angleFix2 - iRreal);
+        p2 = p1 + vec * (angleFix2 + reachLen);
+        p1 = p1 + vec * (angleFix2 - reachLen);
         cent = (p2 + p1) / 2;
         norm = ThinStructure.splitNorms[e].normalized;
         len = (p2 - p1).magnitude;
         if (!ThinStructure.linkInfo[edge.idx2].Contains(e))
         {
-            MeshComponent cylinder = Pool.addPool("cylinder");
-            cylinder.transform(
-                    new Vector3(ioR, ioR, len / mul / 2),
+            if (!specialConn)
+            {
+                string connType = (simple ? "cube" : "cylinder");
+                MeshComponent cube = Pool.addPool(connType);
+                cube.transform(
+                    new Vector3(cR, cR, len / mul / 2),
                     cent,
                     vec,
                     norm
                 );
-            cylinder.Instance.transform.parent = Comp.transform;
+                cube.Instance.transform.parent = Comp.transform;
+            }
+            else
+            {
+                connscale = 1.01f;
+                genSpecConn(cent, vec, norm, len, Comp);
+            }
         }
         //////////////////////////
         GameObject go = CSGMergeComp(curComp - 1);
@@ -1532,16 +1854,16 @@ public class Generator : MonoBehaviour {
         }
         return nosol;
     }
-
-    void genCut(int tar) {
+    
+    void genCut(int tar, bool reverse) {
         if (compNoSol(tar)) {
             genNull();
             return;
         }
         /*************************************/
-        //MeshComponent comp = Pool.list[Pool.find("comp_" + tar)];
-        //MeshComponent comp = Pool.list[Pool.find(Complist[tar].Name)];
-        MeshComponent comp = Complist[tar];
+                    //MeshComponent comp = Pool.list[Pool.find("comp_" + tar)];
+                    //MeshComponent comp = Pool.list[Pool.find(Complist[tar].Name)];
+                    MeshComponent comp = Complist[tar];
 
         int verticeCount = comp.vertices.Count;
         int edgeCount = comp.edges.Count;
@@ -1552,7 +1874,7 @@ public class Generator : MonoBehaviour {
         {
             foreach (int e in comp.edges)
             {
-                splitNorm = genEdgeCut(e);
+                splitNorm = genEdgeCut(e, reverse, false, false);
                 AngleArg aa = ThinStructure.angleArgs[e];
                 aa.norm = splitNorm;aa.axis = ThinStructure.edges[e].vec;
                 Complist[tar].angleArg = Pool.list[Pool.find(Complist[tar].Name)].angleArg = aa;
@@ -1573,14 +1895,14 @@ public class Generator : MonoBehaviour {
                 i++;
             }
             AngleArg aa = null;
-            splitNorm = genCurveCut(edgesidx, out aa, true, false);
+            splitNorm = genCurveCut(edgesidx, out aa, reverse, false, false);
             Complist[tar].angleArg = Pool.list[Pool.find(Complist[tar].Name)].angleArg = aa;
         }
         else if (verticeCount == 1)
         {
             foreach (int node in comp.vertices)
             {
-                splitNorm = genNodeCut(node);
+                splitNorm = genNodeCut(node, true, reverse, false);
             }
         }
         else {
@@ -1625,16 +1947,116 @@ public class Generator : MonoBehaviour {
                 i++;
             }
             AngleArg aa = null;
-            genCurveCut(edgesidx, out aa, false, true);
+            genCurveCut(edgesidx, out aa, true, false, false);
+            
         }
         else
         {
             genNull();
         }
     }
+    void genCutTrack(int tar)
+    {
+        if (compNoSol(tar))
+        {
+            genNull();
+            return;
+        }
+        /*************************************/
+        MeshComponent comp = Complist[tar];
+        int verticeCount = comp.vertices.Count;
+        int edgeCount = comp.edges.Count;
+        int vidxa = -1;
+        foreach (int vidx in comp.vertices) {
+            if (vidxa == -1) vidxa = vidx;
+        }
+        /*******************/
+        if (edgeCount == 1)
+        {
+            foreach (int e in comp.edges)
+            {
+                genEdgeCut(e, false, true, false);
+                genEdgeCut(e, false, true, true);
+                processLastTwoComp(0);
+                genEdgeCut(e, true, true, true);
+                processLastTwoComp(0);
+            }
+        }
+        else if (verticeCount > 1 && edgeCount > 1)
+        {
+            int[] edgesidx = new int[comp.edges.Count];
+            int i = 0;
+            foreach (int e in comp.edges)
+            {
+                Edge edge = ThinStructure.edges[e];
+                edgesidx[i] = e;
+                i++;
+            }
+            AngleArg aa = null;
+            genCurveCut(edgesidx, out aa, false, true, false);
+            genCurveCut(edgesidx, out aa, false, true, true);
+            processLastTwoComp(0);
+            genCurveCut(edgesidx, out aa, true, true, true);
+            processLastTwoComp(0);
+        }
+        /*
+        else if (verticeCount == 1 && ThinStructure.verticesedges[vidxa].Count==2)
+        {
+            foreach (int node in comp.vertices)
+            {
+                genNodeCut(node, false, false, true);
+            }
+        }
+        */
+        else
+        {
+            genNull();
+        }
+    }
+    void mergeSomeComp(List<int> comps)
+    {
+        GameObject Comp = genEmptyCollect();
+        int newtar = curComp - 1;
+        foreach (int tar in comps) {
+            copyCompTo(tar, newtar);
+        }
+        CSGMergeComp(newtar);
+    }
+    void processTwoComp(int op, int compa, int compb)
+    {
+        GameObject para = Complist[compa].Instance.transform.parent.gameObject;
+        GameObject parb = Complist[compb].Instance.transform.parent.gameObject;
+        GameObject[] achild = new GameObject[para.transform.childCount];
+        GameObject[] bchild = new GameObject[parb.transform.childCount];
+        for (int i = 0; i < achild.Length; i++) achild[i] = para.transform.GetChild(i).gameObject;
+        for (int i = 0; i < bchild.Length; i++) bchild[i] = parb.transform.GetChild(i).gameObject;
+        foreach (GameObject go in bchild) go.transform.parent = para.transform;
+        foreach (GameObject go in achild) go.transform.parent = para.transform;
+        if (op == 0) CSGQueue.addCSGSet("+", Complist[compa].Name, Complist[compa].Name, Complist[compb].Name);
+        if (op == 1) CSGQueue.addCSGSet("-", Complist[compa].Name, Complist[compa].Name, Complist[compb].Name);
+        parb.name = "ToDelete";
+        parb.transform.parent = GameObject.Find("ToDelete").transform;
+        curComp--;
+    }
+    void processLastTwoComp(int op) {
+        int compa = curComp - 2;
+        int compb = curComp - 1;
+        GameObject para = Complist[compa].Instance.transform.parent.gameObject;
+        GameObject parb = Complist[compb].Instance.transform.parent.gameObject;
+        GameObject[] achild = new GameObject[para.transform.childCount];
+        GameObject[] bchild = new GameObject[parb.transform.childCount];
+        for (int i = 0; i < achild.Length; i++) achild[i] = para.transform.GetChild(i).gameObject;
+        for (int i = 0; i < bchild.Length; i++) bchild[i] = parb.transform.GetChild(i).gameObject;
+        foreach (GameObject go in bchild) go.transform.parent = para.transform;
+        foreach (GameObject go in achild) go.transform.parent = para.transform;
+        if (op == 0) CSGQueue.addCSGSet("+", Complist[compa].Name, Complist[compa].Name, Complist[compb].Name);
+        if (op == 1) CSGQueue.addCSGSet("-", Complist[compa].Name, Complist[compa].Name, Complist[compb].Name);
+        parb.name = "ToDelete";
+        parb.transform.parent = GameObject.Find("ToDelete").transform;
+        curComp--;
+    }
 
-
-    Vector3 genCurveCut(int[] edgesidx, out AngleArg angleArg, bool ex, bool reverse)
+    Vector3 genCurveCut(int[] edgesidx, out AngleArg angleArg, bool reverse, bool track, bool isside)
     {
         GameObject Comp = genEmptyCollect();
         int e = edgesidx[edgesidx.Length / 2];
@@ -1673,38 +2095,108 @@ public class Generator : MonoBehaviour {
 
         edgesidx = newedgesidx.ToArray();
         foreach (int idx in edgesidx) {
-            MeshComponent cube = Pool.addPool("cube");
-            cube.Instance.transform.parent = Comp.transform;
-            Vector3 vec = ThinStructure.edges[idx].vec;
-            Vector3 cent = ThinStructure.edges[idx].cent;
+            Edge edge = ThinStructure.edges[idx];
+            Vector3 v1 = ThinStructure.vertices[edge.idx1];
+            Vector3 v2 = ThinStructure.vertices[edge.idx2];
+            Vector3 nodenorm1 = Tool.nodenorm(edge.idx1);
+            Vector3 nodenorm2 = Tool.nodenorm(edge.idx2);
             Vector3 norm = ThinStructure.splitNorms[idx];
+            Vector3 vec = ThinStructure.edges[idx].vec.normalized;
             if (Vector3.Dot(stdNorm, norm) < 0) norm *= -1;
             if (reverse) norm *= -1;
             norm.Normalize();
-            float len = ThinStructure.edges[idx].len;
+            /**/
+            if (Vector3.Dot(norm, nodenorm1) > 0.001f || ThinStructure.linkInfo[edge.idx1].Count == 1) 
+            {
+                v1 = v1 - vec * oRreal*2;
+            }
+            if (Vector3.Dot(norm, nodenorm2) > 0.001f || ThinStructure.linkInfo[edge.idx2].Count == 1)
+            {
+                v2 = v2 + vec * oRreal*2;
+            }
+            Vector3 cent = (v1 + v2) / 2;
+            float len = (v2 - v1).magnitude;
+            /**/
             float len_mul = len / mul;
-            if (ex) len_mul += oR * 2.5f;
-            cube.transform(
-                new Vector3(oR * 2f, len_mul / 2, oR),
-                cent - norm * oR * mul,
-                norm,
-                vec
-            );
+            MeshComponent cube = null;
+            if (!track)
+            {
+                cube = Pool.addPool("cube");
+                cube.Instance.transform.parent = Comp.transform;
+                cube.transform(
+                    new Vector3(oR * 1.2f, len_mul / 2, oR),
+                    cent - norm * oR * mul,
+                    norm,
+                    vec
+                );
+            }
+            else
+            {
+                if (!isside)
+                {
+                    cube = Pool.addPool("cube");
+                    cube.Instance.transform.parent = Comp.transform;
+                    cube.transform(
+                        new Vector3(cR * 1.0001f, len_mul / 2, oR),
+                        cent - norm * oR * mul * 0.999f,
+                        norm,
+                        vec
+                    );
+                }
+                else {
+                    Vector3 side = Vector3.Cross(vec, norm).normalized;
+                    if (reverse) side *= -1;
+                    cube = Pool.addPool("cube");
+                    cube.Instance.transform.parent = Comp.transform;
+                    cube.transform(
+                        new Vector3(oR, len_mul / 2, oR * 1.0001f),
+                        cent - norm * oR * mul * 0.999f + side * (oR + cR) * 0.999f * mul,
+                        norm,
+                        vec
+                    );
+                }
+            }
             /**********************************/
 
             int[] vidxs = { ThinStructure.edges[idx].idx1, ThinStructure.edges[idx].idx2 };
             foreach (int vidxn in vidxs)
             {
-                if (ThinStructure.verticesedges[vidxn].Count == 1)
+                bool addNodeCut = false;
+                if (ThinStructure.verticesedges[vidxn].Count == 2)
                 {
-                    MeshComponent cube1 = Pool.addPool("cube");
-                    cube1.Instance.transform.parent = Comp.transform;
-                    cube1.transform(
-                        new Vector3(oR * 2f, oR * 2, oR),
-                        ThinStructure.vertices[vidxn] - norm * oR * mul,
-                        norm,
-                        vec
-                    );
+                    Vector3 veca = Vector3.zero;
+                    Vector3 vecb = Vector3.zero;
+                    foreach (int en in ThinStructure.verticesedges[vidxn]) {
+                        if (veca == Vector3.zero) veca = ThinStructure.splitNorms[en];
+                        else if (vecb == Vector3.zero) vecb = ThinStructure.splitNorms[en];
+                    }
+                    if (Vector3.Dot(veca.normalized, vecb.normalized) > 0.999) addNodeCut = true;
+                }
+                if (addNodeCut)
+                {
+                    if (!track)
+                    {
+                        MeshComponent cube1 = Pool.addPool("cylinder");
+                        cube1.Instance.transform.parent = Comp.transform;
+                        cube1.transform(
+                            new Vector3(oR * 1.2f, oR * 1.2f, oR),
+                            ThinStructure.vertices[vidxn] - norm * oR * mul,
+                            norm,
+                            vec
+                        );
+                    }
+                    else
+                    {
+                        if (ThinStructure.edges[idx].idx1 == vidxn) vec *= -1;
+                        MeshComponent cube1 = Pool.addPool("cylinder");
+                        cube1.Instance.transform.parent = Comp.transform;
+                        cube1.transform(
+                            new Vector3(cR, cR, oR),
+                            ThinStructure.vertices[vidxn] - norm * oR * mul,
+                            norm,
+                            vec
+                        );
+                    }
                 }
             }
         }
@@ -1727,7 +2219,7 @@ public class Generator : MonoBehaviour {
         Vector3 norm = (Vector3.Cross(vec1, vec2)).normalized;
         cube.transform(
             new Vector3(10, 10, oR),
-            cent - norm * oR * mul ,
+            cent - norm * oR * mul,
             norm,
             cent2- cent1
         );
@@ -1735,27 +2227,76 @@ public class Generator : MonoBehaviour {
         CSGMergeComp(curComp - 1);
         return norm;
     }
-    Vector3 genEdgeCut(int e) {
+    Vector3 genEdgeCut(int e, bool reverse, bool track, bool isside) {
         GameObject Comp = genEmptyCollect();
-        MeshComponent cube = Pool.addPool("cube");
+        MeshComponent cube = null;
         Edge edge = ThinStructure.edges[e];
         Vector3 v1 = ThinStructure.vertices[edge.idx1];
         Vector3 v2 = ThinStructure.vertices[edge.idx2];
         Vector3 vec = (v2 - v1).normalized;
         Vector3 cent = (v2 + v1) / 2;
         Vector3 norm = ThinStructure.splitNorms[e].normalized;
+        if (reverse) norm *= -1;
         float len = (v2 - v1).magnitude;
-        cube.transform(
-            new Vector3(oR * 2f, len / mul, oR),
-            cent - norm * oR * mul,
-            norm,
-            vec
-        );
-        cube.Instance.transform.parent = Comp.transform;
+        if (!track)
+        {
+            
+            cube = Pool.addPool("cube");
+            cube.Instance.transform.parent = Comp.transform;
+            cube.transform(
+                new Vector3(oR * 1.2f, len / mul, oR),
+                cent - norm * oR * mul,
+                norm,
+                vec
+            );
+        }
+        else 
+        {
+            if (!isside)
+            {
+                cube = Pool.addPool("cube");
+                cube.Instance.transform.parent = Comp.transform;
+                cube.transform(
+                    new Vector3(cR * 1.0001f, len / mul, oR * 1.0001f),
+                    cent - norm * oR * mul * 0.999f,
+                    norm,
+                    vec
+                );
+            }
+            else {
+                Vector3 side = Vector3.Cross(vec, norm).normalized;
+                if (reverse) side *= -1;
+                cube = Pool.addPool("cube");
+                cube.Instance.transform.parent = Comp.transform;
+                cube.transform(
+                    new Vector3(oR * 1.0001f, len / mul, oR * 1.0001f),
+                    cent - norm * oR * mul * 0.999f + side * (oR + cR) * mul * 0.999f,
+                    norm,
+                    vec
+                );
+            }
+        }
         CSGMergeComp(curComp - 1);
         return norm;
     }
-    Vector3 genNodeCut(int node) {
+
+    List<Vector3> getNodeVecs(int node) {
+        List<Vector3> vecs = new List<Vector3>();
+        foreach (int e in ThinStructure.verticesedges[node])
+        {
+            Edge edge = ThinStructure.edges[e];
+            int idx1 = node == edge.idx1 ? edge.idx1 : edge.idx2;
+            int idx2 = node == edge.idx2 ? edge.idx1 : edge.idx2;
+            Vector3 v1 = ThinStructure.vertices[idx1];
+            Vector3 v2 = ThinStructure.vertices[idx2];
+            Vector3 vec = (v2 - v1).normalized;
+            vecs.Add(vec);
+        }
+        return vecs;
+    }
+
+    Vector3 genNodeCut(int node,bool ex, bool reverse, bool track) {
+        reverse = !reverse;//must change
         GameObject Comp = genEmptyCollect();
         Vector3 pos = ThinStructure.vertices[node];
         List<Vector3> norms = new List<Vector3>();
@@ -1772,24 +2313,84 @@ public class Generator : MonoBehaviour {
         }
         Vector3 common = Vector3.zero;
         norms = Algorithm.nodeNorms(vecs, node, ref common);
+
+        common *= -1;//temp for test
+        for (int i = 0; i < norms.Count; i++) norms[i] *= -1;//temp for test
+
         int cnt = 0;
         foreach (int e in ThinStructure.verticesedges[node]) {
-            MeshComponent cube = Pool.addPool("cube");
+            MeshComponent cube = null;
             Edge edge = ThinStructure.edges[e];
-            Vector3 v1 = ThinStructure.vertices[edge.idx1];
-            Vector3 v2 = ThinStructure.vertices[edge.idx2];
+            int idx1 = node == edge.idx1 ? edge.idx1 : edge.idx2;
+            int idx2 = node == edge.idx1 ? edge.idx2 : edge.idx1;
+            Vector3 v1 = ThinStructure.vertices[idx1];
+            Vector3 v2 = ThinStructure.vertices[idx2];
             Vector3 vec = (v2 - v1).normalized;
+            float fix = 0;
+            if (node == edge.idx1) fix = edge.fixDis1;
+            if (node == edge.idx2) fix = edge.fixDis2;
+            //if (!ex) v2 = v1 + vec * fix;
+            if (!ex) v2 = v1 + vec * (fix + reachLen*1.01f);
+            else v1 -= vec * oRreal;
             Vector3 cent = (v2 + v1) / 2;
+            float len = (v2 - v1).magnitude / 2;
             //Vector3 norm = ThinStructure.splitNorms[e].normalized;
-            Vector3 norm = norms[cnt++]; 
-            float len = (v2 - v1).magnitude;
-            cube.transform(
-                new Vector3(oR * 2f, len / mul, oR),
-                cent - norm * oR * mul,
-                norm,
-                vec
+            Vector3 norm = norms[cnt++];
+            if (reverse) norm *= -1;
+            if (!track)
+            {
+                cube = Pool.addPool("cube");
+                cube.transform(
+                    new Vector3(oR * 1.2f, len / mul, oR),
+                    cent - norm * oR * mul * 0.999f,
+                    norm,
+                    vec
+                );
+                cube.Instance.transform.parent = Comp.transform;
+            }
+            else
+            {
+                cube = Pool.addPool("cube");
+                cube.transform(
+                    new Vector3(cR * 1.0001f, len / mul, oR),
+                    cent - norm * oR * mul * 0.999f,
+                    norm,
+                    vec
+                );
+                cube.Instance.transform.parent = Comp.transform;
+            }
+            
+        }
+        /*******************************/
+        int ea = -1, eb = -1;
+        foreach (int en in ThinStructure.verticesedges[node])
+        {
+            if (ea == -1) ea = en;
+            else if (eb == -1) eb = en;
+        }
+        MeshComponent cylinder = null;
+        if (reverse) common *= -1;
+        if (!track)
+        {
+            MeshComponent cube1 = Pool.addPool("cylinder");
+            cube1.Instance.transform.parent = Comp.transform;
+            cube1.transform(
+                new Vector3(oR * 1.2f, oR * 1.2f, oR),
+                ThinStructure.vertices[node] - common * oR * mul * 0.999f + common,
+                common,
+                ThinStructure.edges[ea].vec
             );
-            cube.Instance.transform.parent = Comp.transform;
+        }
+        else if(ThinStructure.verticesedges[node].Count<3)//
+        {
+            cylinder = Pool.addPool("cylinder");
+            cylinder.transform(
+                new Vector3(cR * 1.0001f, cR, oR),
+                ThinStructure.vertices[node] - common * oR * mul * 0.999f,
+                common,
+                ThinStructure.edges[ea].vec
+            );
+            cylinder.Instance.transform.parent = Comp.transform;
         }
         CSGMergeComp(curComp - 1);
         return common;
@@ -1910,16 +2511,16 @@ public class Generator : MonoBehaviour {
             {
                 if (hi.idx == vi)
                 {
-                    MeshComponent mc = addCompToPool(1, -1);
+                    MeshComponent mc = addCompToPool(21, -1, 1);
                     Vector3 p1 = ThinStructure.vertices[hi.idx];
                     Vector3 p2 = p1 + 100 * hi.dir;
                     mc.transform(
-                        new Vector3(iR, iR, (p2 - p1).magnitude / (mul * 2)),
+                        new Vector3(hR, hR, (p2 - p1).magnitude / (mul * 2)),
                         (p2 + p1) / 2,
                         hi.dir,
                         Tool.calPerpend(hi.dir, Tool.randomVector())
                     );
-                    mc.Instance.transform.parent = GameObject.Find("Collect").transform;
+                    mc.Instance.transform.parent = GameObject.Find("ToDelete").transform;
                     CSGQueue.addCSGSet("-", Complist[tarcomp].Name, Complist[tarcomp].Name, mc.Name);
                 }
             }
@@ -1951,5 +2552,9 @@ public class Generator : MonoBehaviour {
     }
 }
 //To-do
-//decrease the case of duplicated reading
-//translate in csgtool?
+//decrease the case of duplicated reading -- bug
+//translation in csgtool -- bug
+//有group時的merge - done
+//接縫的連結 - done
+//直線curve
+//CSG禿出來的問題

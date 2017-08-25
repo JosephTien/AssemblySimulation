@@ -90,7 +90,9 @@ public class GroupInfo : MonoBehaviour
             foreach (int v in vert) {
                 nodeidx = v;
             }
-            curDir = initNorm = Algorithm.nodeNorm(nodeidx);
+
+            initNorm = Algorithm.nodeNorm(nodeidx);
+            curDir = initNorm;
             curDir2 = -curDir;
             Bounding.boundInfo[nodeidx + ThinStructure.edgeNum].curNorm = initNorm;
             return;
@@ -98,6 +100,7 @@ public class GroupInfo : MonoBehaviour
         else {
             rotateTo(0);
             initNorm = curDir;
+            
         }
     }
     public void getChildrenBoundInfo()
@@ -351,6 +354,7 @@ public class GroupInfo : MonoBehaviour
         GameObject parent = genMergeRoot();
         foreach (int e in ThinStructure.verticesedges[nodeidx]) {
             GroupInfo gi = Bounding.groupInfo[Bounding.compIdx[e]];
+            if (gi.isChild) continue;
             //Bounding.boundInfo[e].rotateTo(initNorm);//gi.rotateTo(Bounding.boundInfo[e].angle);
             gi.rotateTo(curDir);
             //test

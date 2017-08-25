@@ -436,6 +436,7 @@ public class Bounding : MonoBehaviour {
 
     public void writeInfo()
     {
+        //ThinStructure.reverseAllSplitNorm();
         ThinStructure.outputsplitNorms(ThinStructure.curSet);
         ThinStructure.linkInfo = new HashSet<int>[ThinStructure.verticeNum];
         for (int i = 0; i < ThinStructure.verticeNum; i++) { ThinStructure.linkInfo[i] = new HashSet<int>(); }
@@ -483,6 +484,7 @@ public class Bounding : MonoBehaviour {
 
     public void writeInfoFromGroup() {
         assignSplitInfo();
+        //ThinStructure.reverseAllSplitNorm();
         ThinStructure.outputsplitNorms(ThinStructure.curSet);
         ThinStructure.linkInfo = new HashSet<int>[ThinStructure.verticeNum];
         for (int i = 0; i < ThinStructure.verticeNum; i++) { ThinStructure.linkInfo[i] = new HashSet<int>(); }
@@ -551,12 +553,13 @@ public class Bounding : MonoBehaviour {
         init();
     }
 
+    bool nosharp = true;
     void init() {
         dataEditor = GameObject.Find("DataManager").GetComponent<DataEditor>();
         ThinStructure.importantVert = new HashSet<int>();
         dataEditor.addEndPointToImpo();
         dataEditor.addJuncPointToInpo();
-        dataEditor.addSharpPointToImpo();
+        if(nosharp) dataEditor.addSharpPointToImpo();
         dataEditor.GTSs = dataEditor.genSecInfo();
     }
     void fixDir()
@@ -1099,7 +1102,9 @@ public class Bounding : MonoBehaviour {
                 BoundInfo bi = hit.collider.gameObject.GetComponentInChildren<BoundInfo>();
                 if (bi.isvert) {
                     bool isin = false;
-                    HoleInfo hi = new HoleInfo(bi.idx, Tool.randomVector());
+                    Vector3 dir = new Vector3(Random.Range(0, 2), Random.Range(0, 2), Random.Range(0, 2));
+                    //HoleInfo hi = new HoleInfo(bi.idx, Tool.randomVector());
+                    HoleInfo hi = new HoleInfo(bi.idx, dir);
                     foreach (HoleInfo hii in holeInfos) {
                         if (hii.idx == bi.idx) {
                             isin = true;
@@ -1165,3 +1170,7 @@ public class Bounding : MonoBehaviour {
         else TX.text += "\n\n";
     }
 }
+//手動merge的與grouping的功能
+//node選擇性merge周邊的功能
+//手動merge無solve
+//接水方向

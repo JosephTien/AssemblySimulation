@@ -1,8 +1,36 @@
-del ..\inputSet\202\inputObj\*.obj
-mkdir ..\inputSet\202\inputObj\
-copy pool\finesphere_0.obj ..\inputSet\202\inputObj\
-move ..\inputSet\202\inputObj\finesphere_0.obj ..\inputSet\202\inputObj\output_0.obj
-copy pool\sphere_1.obj ..\inputSet\202\inputObj\
-move ..\inputSet\202\inputObj\sphere_1.obj ..\inputSet\202\inputObj\output_1.obj
-copy pool\comp_7.obj ..\inputSet\202\inputObj\
-move ..\inputSet\202\inputObj\comp_7.obj ..\inputSet\202\inputObj\output_2.obj
+del ..\inputSet\92\inputObj\*.obj
+mkdir ..\inputSet\92\inputObj\
+copy pool\finesphere_0.obj ..\inputSet\92\inputObj\
+move ..\inputSet\92\inputObj\finesphere_0.obj ..\inputSet\92\inputObj\output_0.obj
+copy pool\comp_43.obj ..\inputSet\92\inputObj\
+move ..\inputSet\92\inputObj\comp_43.obj ..\inputSet\92\inputObj\output_1.obj
+copy pool\comp_49.obj ..\inputSet\92\inputObj\
+move ..\inputSet\92\inputObj\comp_49.obj ..\inputSet\92\inputObj\output_2.obj
+copy pool\comp_44.obj ..\inputSet\92\inputObj\
+move ..\inputSet\92\inputObj\comp_44.obj ..\inputSet\92\inputObj\output_3.obj
+copy pool\comp_50.obj ..\inputSet\92\inputObj\
+move ..\inputSet\92\inputObj\comp_50.obj ..\inputSet\92\inputObj\output_4.obj
+copy pool\comp_45.obj ..\inputSet\92\inputObj\
+move ..\inputSet\92\inputObj\comp_45.obj ..\inputSet\92\inputObj\output_5.obj
+copy pool\comp_51.obj ..\inputSet\92\inputObj\
+move ..\inputSet\92\inputObj\comp_51.obj ..\inputSet\92\inputObj\output_6.obj
+copy pool\comp_46.obj ..\inputSet\92\inputObj\
+move ..\inputSet\92\inputObj\comp_46.obj ..\inputSet\92\inputObj\output_7.obj
+copy pool\comp_52.obj ..\inputSet\92\inputObj\
+move ..\inputSet\92\inputObj\comp_52.obj ..\inputSet\92\inputObj\output_8.obj
+copy pool\comp_47.obj ..\inputSet\92\inputObj\
+move ..\inputSet\92\inputObj\comp_47.obj ..\inputSet\92\inputObj\output_9.obj
+copy pool\comp_53.obj ..\inputSet\92\inputObj\
+move ..\inputSet\92\inputObj\comp_53.obj ..\inputSet\92\inputObj\output_10.obj
+copy pool\comp_48.obj ..\inputSet\92\inputObj\
+move ..\inputSet\92\inputObj\comp_48.obj ..\inputSet\92\inputObj\output_11.obj
+copy pool\comp_54.obj ..\inputSet\92\inputObj\
+move ..\inputSet\92\inputObj\comp_54.obj ..\inputSet\92\inputObj\output_12.obj
+copy pool\comp_55_1.obj ..\inputSet\92\inputObj\
+move ..\inputSet\92\inputObj\comp_55_1.obj ..\inputSet\92\inputObj\3dp_1.obj
+copy pool\comp_56_1.obj ..\inputSet\92\inputObj\
+move ..\inputSet\92\inputObj\comp_56_1.obj ..\inputSet\92\inputObj\3dp_2.obj
+copy pool\comp_57_1.obj ..\inputSet\92\inputObj\
+move ..\inputSet\92\inputObj\comp_57_1.obj ..\inputSet\92\inputObj\3dp_3.obj
+copy pool\comp_58_1.obj ..\inputSet\92\inputObj\
+move ..\inputSet\92\inputObj\comp_58_1.obj ..\inputSet\92\inputObj\3dp_4.obj

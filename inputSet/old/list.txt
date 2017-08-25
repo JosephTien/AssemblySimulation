@@ -1,0 +1,37 @@
+0 : line
+1 : loop
+2 : bear
+3 : y
+4 : cube
+5 : cross
+6 : 2 junc
+7 : 3 junc
+8 : 4 junc
+9 : 5 junc
+10 : 2 junc why not trivial
+11 : 2 junc sharp
+12 : 4 junc 31
+13 : 3 junc 21
+14 : 類共平面1
+15 : 類共平面2
+16 : 平3爪
+17 : curve
+44 : dualcube
+101:half
+102:cup
+171: 螺旋
+172: 半螺旋
+91 : 瓢蟲 (*100)
+92 : 貓
+93 : 鱷魚 (*500)
+94 : 柵欄 (*2)
+95 : bucky(*2)
+96 : 小柵欄
+97 : 房屋 (*10)
+99 : random 3 branch
+999 : single
+1031 : ???
+9990 : single normal remove
+9991 : single accepted remove
+9992 : single not accepted remove
+9993 : single should accepted remove

@@ -112,4 +112,22 @@ public class Tool : MonoBehaviour {
         }
         return null;
     }
+    public static Vector3 nodenorm(int idx) {
+        if (ThinStructure.verticesedges[idx].Count == 2) {
+            int ea = -1, eb = -1;
+            foreach (int e in ThinStructure.verticesedges[idx]) {
+                if (ea == -1) ea = e;
+                else if (eb == -1) eb = e;
+            }
+            Edge edgea = ThinStructure.edges[ea];
+            Edge edgeb = ThinStructure.edges[eb];
+            Vector3 veca = edgea.vec;
+            if (edgea.idx2 == idx) veca *= -1;
+            Vector3 vecb = edgeb.vec;
+            if (edgeb.idx2 == idx) vecb *= -1;
+            if (Mathf.Abs(Vector3.Dot(veca, vecb)) > 0.99f) return Vector3.zero;
+            return (veca + vecb).normalized;
+        }
+        return Vector3.zero;
+    }
 }

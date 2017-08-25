@@ -145,6 +145,9 @@ public class Algorithm : MonoBehaviour {
                 }
             }
         }
+        if (minval > 0.99f) {
+            norm = Tool.calPerpend(positions[1] - positions[0], Tool.randomVector());
+        }
         /********************************/
         /*
         for (int i = 0; i < pos.Length;i++) {

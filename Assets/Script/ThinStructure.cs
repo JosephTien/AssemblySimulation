@@ -49,6 +49,7 @@ public class ThinStructure : MonoBehaviour {
     public static Vector3[] vertices;
     public static Edge[] edges;
     public static Vector3[] splitNorms;
+    public static bool[] splitReverse;
     public static AngleArg[] angleArgs;
     public static CompInfo[] compinfo_edge;
     public static CompInfo[] compinfo_vert;
@@ -64,10 +65,9 @@ public class ThinStructure : MonoBehaviour {
     public static int[] solvedinfo;
     public static int verticeNum;
     public static int edgeNum;
-    public static float tuberadii = 10f;
+    public static float tuberadii = 15f;
     public static int curSet;
     public static float myscale = 1;
-    
     // Use this for initialization
     void Start () {
         edgeVecs = new List<Vector3>();
@@ -80,6 +80,7 @@ public class ThinStructure : MonoBehaviour {
         edges = new Edge[edgeNum];
         edgeGOs = new GameObject[edgeNum];
         splitNorms = new Vector3[edgeNum];
+        splitReverse = new bool[edgeNum];
         angleArgs = new AngleArg[edgeNum];
         compinfo_edge = new CompInfo[edgeNum];
         compinfo_vert = new CompInfo[verticeNum];
@@ -476,20 +477,32 @@ public class ThinStructure : MonoBehaviour {
             sw.Write(sb.ToString());
         }
     }
-
+    public static void reverseAllSplitNorm() {
+        for (int i = 0; i < splitReverse.Length; i++) {
+            splitReverse[i] = true;
+        }
+    }
+    public static void applyReverseSplitNorm()
+    {
+        for (int i = 0; i < splitReverse.Length; i++) {
+            if (splitReverse[i]) splitNorms[i] *= -1;
+        }
+    }
     public static void outputsplitNorms(int setnum) {
         //write splitInfo
         StringBuilder sb = new StringBuilder();
         for (int i = 0; i < edgeNum; i++)
         {
+            Vector3 splitNorm = splitNorms[i];
+            if (splitReverse[i]) splitNorm *= -1;
             if (angleArgs[i].hasDirDefine())
             {
-                sb.Append(string.Format("{0} {1} {2} {3} {4} {5} {6} {7} {8}\n", splitNorms[i].x, splitNorms[i].y, splitNorms[i].z,
+                sb.Append(string.Format("{0} {1} {2} {3} {4} {5} {6} {7} {8}\n", splitNorm.x, splitNorm.y, splitNorm.z,
                                                                     angleArgs[i].dir1.x, angleArgs[i].dir1.y, angleArgs[i].dir1.z,
                                                                     angleArgs[i].dir2.x, angleArgs[i].dir2.y, angleArgs[i].dir2.z));
             }
             else {
-                sb.Append(string.Format("{0} {1} {2} {3} {4} {5} {6}\n", splitNorms[i].x, splitNorms[i].y, splitNorms[i].z,
+                sb.Append(string.Format("{0} {1} {2} {3} {4} {5} {6}\n", splitNorm.x, splitNorm.y, splitNorm.z,
                                                                     angleArgs[i].angle2, angleArgs[i].angle2_2, angleArgs[i].angle3, angleArgs[i].angle3_2));
             }
         }

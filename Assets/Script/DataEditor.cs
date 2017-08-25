@@ -20,7 +20,8 @@ public class DataEditor : MonoBehaviour {
     public void setDefault() {
         try
         {
-            GameObject.Find("Canvas/InputField_Input").GetComponent<UnityEngine.UI.InputField>().text = "1031*1000";
+            //GameObject.Find("Canvas/InputField_Input").GetComponent<UnityEngine.UI.InputField>().text = "1031*1000";
+            GameObject.Find("Canvas/InputField_Input").GetComponent<UnityEngine.UI.InputField>().text = "2";
             GameObject.Find("Canvas/Panel_Lin/InputField_Thre").GetComponent<UnityEngine.UI.InputField>().text = "1";
         }
         catch { }
