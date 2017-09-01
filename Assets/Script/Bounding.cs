@@ -1102,7 +1102,7 @@ public class Bounding : MonoBehaviour {
                 BoundInfo bi = hit.collider.gameObject.GetComponentInChildren<BoundInfo>();
                 if (bi.isvert) {
                     bool isin = false;
-                    Vector3 dir = new Vector3(Random.Range(0, 2), Random.Range(0, 2), Random.Range(0, 2));
+                    Vector3 dir = new Vector3(Random.Range(-2, 2), Random.Range(-2, 2), Random.Range(-2, 2));
                     //HoleInfo hi = new HoleInfo(bi.idx, Tool.randomVector());
                     HoleInfo hi = new HoleInfo(bi.idx, dir);
                     foreach (HoleInfo hii in holeInfos) {
@@ -1174,3 +1174,5 @@ public class Bounding : MonoBehaviour {
 //node選擇性merge周邊的功能
 //手動merge無solve
 //接水方向
+
+//zero rotation 在選endnode的時候

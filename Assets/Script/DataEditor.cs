@@ -357,6 +357,7 @@ public class DataEditor : MonoBehaviour {
     List<GameObject> drawed = new List<GameObject>();
     int curGroup = -1;
     public void aimNextGroup() {
+
         curGroup = (curGroup + 1) % ThinStructure.groupnum;
         foreach (GameObject go in drawed) Tool.setColor(go, Color.white);
         drawed = new List<GameObject>();
@@ -369,7 +370,9 @@ public class DataEditor : MonoBehaviour {
                 int end = endIdx = ts.end;
                 LTSs.Add(ts);
                 drawed.Add(ThinStructure.verticeGOs[from]);
+                drawed.Add(ThinStructure.verticeGOs[end]);
                 Tool.setColor(ThinStructure.verticeGOs[from], Color.green);
+                Tool.setColor(ThinStructure.verticeGOs[end], Color.green);
                 while (to != end)
                 {
                     drawed.Add(ThinStructure.verticeGOs[to]);
@@ -379,7 +382,7 @@ public class DataEditor : MonoBehaviour {
                     to = next;
                 }
             }
-        }        
+        }
     }
 
     private int getNextImpo(int from, int to)
@@ -461,14 +464,14 @@ public class DataEditor : MonoBehaviour {
                 {
                     int last = -1;
                     int end = getNextImpo(pa, ch,ref last);
-                    if (!visited[pa][end]||!visited[end][last])
+                    if (!visited[pa][end])
                     {
                         queue.Enqueue(end);
                         TSs.Add(new TS(pa, ch, end));
                         visited[pa][end] = true;
                         visited[end][pa] = true;
-                        visited[pa][ch] = true;
-                        visited[ch][pa] = true;
+                        //visited[pa][ch] = true;
+                        //visited[ch][pa] = true;
                     }
                 }
             }
@@ -523,7 +526,7 @@ public class DataEditor : MonoBehaviour {
                 isEdgeDelete[ThinStructure.neighborMap[from][to]] = true;
                 isEdgeDelete[ThinStructure.neighborMap[to][next]] = true;
                 isVertDelete[to] = true;
-                Edge e;
+                Edge e = new Edge(from, next);
                 if (nextnext == end)
                 {
                     isEdgeDelete[ThinStructure.neighborMap[next][nextnext]] = true;
@@ -533,7 +536,6 @@ public class DataEditor : MonoBehaviour {
                     addEdges.Add(e);
                     break;
                 }
-                e = new Edge(from, next);
                 e.group = ThinStructure.edges[ThinStructure.neighborMap[from][to]].group;
                 addEdges.Add(e);
                 from = next;

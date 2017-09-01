@@ -207,8 +207,8 @@ public class ThinStructure : MonoBehaviour {
         {
             line = file.ReadLine(); items = line.Split(' ');
             if (items.Length <= 1) { i--; continue; }
-            int v1 = int.Parse(items[0]);
-            int v2 = int.Parse(items[1]);
+            int v1 = int.Parse(items[0])-1;
+            int v2 = int.Parse(items[1])-1;
             impoSet.Add(new Edge(v1, v2));
         }
         file.Close();
@@ -224,7 +224,7 @@ public class ThinStructure : MonoBehaviour {
             importantVert.Add(b);
             edgeNum += b - a;
             for (int i = a; i < b; i++) {
-                Edge ee = new Edge(i-1, i);
+                Edge ee = new Edge(i, i+1);
                 ee.group = groupnum;
                 edges_temp.Add(ee);
             }

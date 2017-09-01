@@ -543,10 +543,10 @@ public class Generator : MonoBehaviour {
     bool geninside = true;
     bool cave = true;//cave inside or not (save time)
     int cavemode = 1;
-    bool conn = false;//connector inside or not (save time)
+    bool conn = true;//connector inside or not (save time)
     bool simple = true;
     bool track = false;
-    bool specialConn = true;
+    bool specialConn = false;
     void genTest() {
         /*
          * Comp :
@@ -1240,12 +1240,13 @@ public class Generator : MonoBehaviour {
     /**********************************************************************************************************************************************/
     /**********************************************************************************************************************************************/
     /**********************************************************************************************************************************************/
-    static float hR = 0.14f;
     static float iR = 0.1f;
     static float oR = 0.5f;
     static float oRold = oR;
-    static float cR = (oR + iR) / 2;
-    static float ccR = (cR + iR) / 2;
+    static float ccR = (oR + iR) / 2;
+    static float cR = (oR + ccR) / 2;
+    //static float hR = 0.14f;
+    static float hR = ccR;
     static float mul = 50;
     static float iRreal = iR * mul;
     static float oRreal = oR * mul;
@@ -1261,11 +1262,12 @@ public class Generator : MonoBehaviour {
             oRoldreal = oRold * mul;
             oR /= Mathf.Sqrt(2);
             oRreal = oR * mul;
-            cR = (oR + iR) / 2;
-            ccR = (cR + iR) / 2;
+            ccR = (oR + iR) / 2;
+            cR = (oR + ccR) / 2;
             cRreal = cR * mul;
             ccRreal = ccR * mul;
             reachLen = cRreal;
+            hR = ccR;
         }
     }
     void genAssemComps(int type)//尚未考慮fix很小(甚至於負數)的時候
@@ -1273,24 +1275,34 @@ public class Generator : MonoBehaviour {
         int columntype = simple ? 3 : 1;
         //int columntype2 = 1;
         float R = oR;
+        float R2 = oR;
         float Rreal = oRreal;
         float littlescale = 1.0001f;
         bool ex = false;
         bool thin = false;
-        if (type == 1) {
+        if (type == 0) {
+            if (cavemode == 2) {
+                R2 = R / 2;
+            }
+        }
+        else if (type == 1) {
             columntype = 21;
             R = iR;
+            R2 = iR;
             Rreal = iRreal;
             ex = true;
             thin = true;
         }
         else if (type == 2)
         {
+            //columntype = 3;
+            //R = ccR;//(ccR + iR)/2;//ccR
             columntype = 21;
-            R = cR;
-            Rreal = cRreal;
+            R = (ccR + iR) / 2;
+            R2 = R;
+            Rreal = R * mul;
             ex = true;
-            thin = true;
+            thin = false;
         }
 
         MeshComponent[] edgeInstance = new MeshComponent[ThinStructure.edgeNum];
@@ -1302,6 +1314,7 @@ public class Generator : MonoBehaviour {
             MeshComponent thisvertInstance = null;
             Vector3 vertforw = new Vector3(0, 0, 1);
             Vector3 vertup = new Vector3(0, 1, 0);
+            float Rx = R,Ry = R,Rz = R;
             if (!thin) {
                 int ea = -1, eb = -1;
                 foreach (int en in ThinStructure.verticesedges[i])
@@ -1315,6 +1328,8 @@ public class Generator : MonoBehaviour {
                     thisvertInstance = addCompToPool(1, thisvert, 0);
                     vertforw = ThinStructure.splitNorms[ea];
                     vertup = ThinStructure.edges[ea].vec;
+                    if (cavemode == 2) Rz = (hR + oR) / 2;
+                    else Rz = R2;
                 }
                 //else if (ThinStructure.verticesedges[i].Count == 2 && simple) {
                 else if (ThinStructure.verticesedges[i].Count == 2)
@@ -1327,6 +1342,7 @@ public class Generator : MonoBehaviour {
                         vertforw = ThinStructure.splitNorms[ea];
                         vertup = Tool.calPerpend(vertup, Tool.randomVector());
                     }
+                    Rx = Ry = R2;
                 }
                 else if (ThinStructure.verticesedges[i].Count == 3)
                 {
@@ -1334,6 +1350,7 @@ public class Generator : MonoBehaviour {
                     List<Vector3> vecs = getNodeVecs(i);
                     Algorithm.nodeNorms(vecs, i, ref vertforw);
                     vertup = Tool.calPerpend(vertup, (ThinStructure.edges[ea].vec + ThinStructure.edges[eb].vec) / 2);
+                    Rz = R2;
                 }
                 else
                 {
@@ -1344,7 +1361,7 @@ public class Generator : MonoBehaviour {
                 thisvertInstance = addCompToPool(20, thisvert, 0);
             } 
             thisvertInstance.transform(
-                new Vector3(R, R, R),
+                new Vector3(Rx, Ry, Rz),
                 ThinStructure.vertices[thisvert],
                 vertforw,
                 vertup
@@ -1366,7 +1383,7 @@ public class Generator : MonoBehaviour {
                 {
                     MeshComponent columnInstance = addCompToPool(columntype, -1, 1);
                     columnInstance.transform(
-                        new Vector3(R, R, (p1_ - v1).magnitude / (mul * 2) * littlescale),
+                        new Vector3(R, R2, (p1_ - v1).magnitude / (mul * 2) * littlescale),
                         (p1_ + v1) / 2,
                         p1_ - v1,
                         -ThinStructure.splitNorms[edge]
@@ -1380,7 +1397,7 @@ public class Generator : MonoBehaviour {
                         } 
                         else indepClmnInstance = addCompToPool(columntype, edge, 1);
                         indepClmnInstance.transform(
-                            new Vector3(R, R, (p2 - p1).magnitude / (mul * 2) * littlescale),
+                            new Vector3(R, R2, (p2 - p1).magnitude / (mul * 2) * littlescale),
                             (v1 + v2) / 2,
                             v2 - v1,
                             -ThinStructure.splitNorms[edge]
@@ -1397,7 +1414,7 @@ public class Generator : MonoBehaviour {
                         if (!ThinStructure.linkInfo[thatvert].Contains(edge))
                         {
                             columnInstance.transform(
-                                new Vector3(R, R, (p2 - v1).magnitude / (mul * 2) * littlescale),
+                                new Vector3(R, R2, (p2 - v1).magnitude / (mul * 2) * littlescale),
                                 (p2 + v1) / 2,
                                 p2 - v1,
                                 -ThinStructure.splitNorms[edge]
@@ -1409,7 +1426,7 @@ public class Generator : MonoBehaviour {
                         else
                         {
                             columnInstance.transform(
-                                new Vector3(R, R, (v2 - v1).magnitude / (mul * 2) * littlescale),
+                                new Vector3(R, R2, (v2 - v1).magnitude / (mul * 2) * littlescale),
                                 (v2 + v1) / 2,
                                 v2 - v1,
                                 -ThinStructure.splitNorms[edge]
@@ -1623,8 +1640,10 @@ public class Generator : MonoBehaviour {
                     {
                         string connType = (simple ? "cube" : "cylinder");
                         MeshComponent cube = Pool.addPool(connType);
+                        float cR1 = cR;
+                        float cR2 = oR/2;
                         cube.transform(
-                            new Vector3(cR, cR, len / mul / 2),
+                            new Vector3(cR1, cR2, len / mul / 2),
                             cent,
                             vec,
                             norm
@@ -1673,8 +1692,10 @@ public class Generator : MonoBehaviour {
                     {
                         string connType = (simple ? "cube" : "cylinder");
                         MeshComponent cube = Pool.addPool(connType);
+                        float cR1 = cR;
+                        float cR2 = oR / 2 * 1.0001f;
                         cube.transform(
-                            new Vector3(cR, cR, len / mul / 2),
+                            new Vector3(cR1, cR2, len / mul / 2),
                             cent,
                             vec,
                             norm
@@ -1723,8 +1744,10 @@ public class Generator : MonoBehaviour {
             {
                 string connType = (simple ? "cube" : "cylinder");
                 MeshComponent cube = Pool.addPool(connType);
+                float cR1 = cR;
+                float cR2 = oR / 2;
                 cube.transform(
-                    new Vector3(cR, cR, len / mul / 2),
+                    new Vector3(cR1, cR2, len / mul / 2),
                     cent,
                     vec,
                     norm
@@ -1762,8 +1785,10 @@ public class Generator : MonoBehaviour {
             {
                 string connType = (simple ? "cube" : "cylinder");
                 MeshComponent cube = Pool.addPool(connType);
+                float cR1 = cR;
+                float cR2 = oR / 2 * 1.0001f;
                 cube.transform(
-                    new Vector3(cR, cR, len / mul / 2),
+                    new Vector3(cR1, cR2, len / mul / 2),
                     cent,
                     vec,
                     norm
@@ -1791,8 +1816,10 @@ public class Generator : MonoBehaviour {
             {
                 string connType = (simple ? "cube" : "cylinder");
                 MeshComponent cube = Pool.addPool(connType);
+                float cR1 = cR;
+                float cR2 = oR / 2 * 1.0001f;
                 cube.transform(
-                    new Vector3(cR, cR, len / mul / 2),
+                    new Vector3(cR1, cR2, len / mul / 2),
                     cent,
                     vec,
                     norm
@@ -2376,7 +2403,7 @@ public class Generator : MonoBehaviour {
             cube1.Instance.transform.parent = Comp.transform;
             cube1.transform(
                 new Vector3(oR * 1.2f, oR * 1.2f, oR),
-                ThinStructure.vertices[node] - common * oR * mul * 0.999f + common,
+                ThinStructure.vertices[node] - common * oR * mul * 0.999f,
                 common,
                 ThinStructure.edges[ea].vec
             );
@@ -2557,4 +2584,7 @@ public class Generator : MonoBehaviour {
 //有group時的merge - done
 //接縫的連結 - done
 //直線curve
-//CSG禿出來的問題
+//CSG凸出來的問題
+
+//合體模式中挖注入洞的效果
+//太短?
