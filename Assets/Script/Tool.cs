@@ -22,6 +22,18 @@ public class Tool : MonoBehaviour {
         return Vector3.Cross(Vector3.Cross(baseVec, toVec), baseVec).normalized;
     }
 
+    public static GameObject DrawCube(Vector3 pmax, Vector3 pmin, Color color)
+    {
+        GameObject go = GameObject.Instantiate(Resources.Load("Cube")) as GameObject;
+        Vector3 cent = (pmax + pmin) / 2;
+        Vector3 up = (new Vector3(cent.x, cent.y, pmax.z) - cent).normalized;
+        Vector3 forw = (new Vector3(cent.x, pmax.y, cent.z) - cent).normalized;
+        go.transform.localScale = new Vector3(Mathf.Abs(pmax.x - pmin.x), Mathf.Abs(pmax.y - pmin.y), Mathf.Abs(pmax.z - pmin.z));
+        go.transform.position = cent;
+        //go.transform.rotation = Quaternion.LookRotation(forw, up);
+        go.GetComponent<MeshRenderer>().material.color = color;
+        return go;
+    }
     public static GameObject DrawBall(Vector3 pos, float radii, Color color) {
         GameObject go = GameObject.Instantiate(Resources.Load("Sphere")) as GameObject;
         go.transform.localScale = new Vector3(radii*2, radii * 2, radii * 2);
@@ -46,7 +58,7 @@ public class Tool : MonoBehaviour {
     }
 
     public static void clearObj() {
-
+        /*
         GameObject go;
         go = GameObject.Find("Collect");
         for (int i = 0; i <go.transform.childCount;i++) {
@@ -62,6 +74,32 @@ public class Tool : MonoBehaviour {
         {
             Destroy(go.transform.GetChild(i).gameObject);
         }
+        */
+        GameObject go;
+        Transform[] trs;
+        Transform toDelete = GameObject.Find("ToDelete").transform;
+
+        go = GameObject.Find("Collect");
+        trs = go.GetComponentsInChildren<Transform>();
+        foreach (Transform tr in trs) if (tr.gameObject != go) tr.parent = toDelete;
+
+        go = GameObject.Find("Assist");
+        trs = go.GetComponentsInChildren<Transform>();
+        foreach (Transform tr in trs) if (tr.gameObject != go) tr.parent = toDelete;
+        
+        go = GameObject.Find("Sample");
+        trs = go.GetComponentsInChildren<Transform>();
+        foreach (Transform tr in trs) if (tr.gameObject != go) tr.parent = toDelete;
+    }
+    public static IEnumerator clearTodelete() {
+        yield return new WaitForSeconds(0.5f);
+        GameObject go;
+        go = GameObject.Find("ToDelete");
+        for (int i = 0; i < go.transform.childCount; i++)
+        {
+            Destroy(go.transform.GetChild(i).gameObject);
+        }
+        yield return 0;
     }
     public static bool isParallel(Vector3 vec1, Vector3 vec2) {
         if (Mathf.Abs(Vector3.Dot(vec1.normalized, vec2.normalized)) > 0.99) return true;

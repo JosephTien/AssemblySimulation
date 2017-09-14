@@ -21,7 +21,7 @@ public class DataEditor : MonoBehaviour {
         try
         {
             //GameObject.Find("Canvas/InputField_Input").GetComponent<UnityEngine.UI.InputField>().text = "1031*1000";
-            GameObject.Find("Canvas/InputField_Input").GetComponent<UnityEngine.UI.InputField>().text = "2";
+            GameObject.Find("Canvas/InputField_Input").GetComponent<UnityEngine.UI.InputField>().text = "103";
             GameObject.Find("Canvas/Panel_Lin/InputField_Thre").GetComponent<UnityEngine.UI.InputField>().text = "1";
         }
         catch { }
@@ -464,14 +464,14 @@ public class DataEditor : MonoBehaviour {
                 {
                     int last = -1;
                     int end = getNextImpo(pa, ch,ref last);
-                    if (!visited[pa][end])
+                    if (!(visited[pa][ch] || visited[end][last]))
                     {
                         queue.Enqueue(end);
                         TSs.Add(new TS(pa, ch, end));
                         visited[pa][end] = true;
                         visited[end][pa] = true;
-                        //visited[pa][ch] = true;
-                        //visited[ch][pa] = true;
+                        visited[pa][ch] = true;
+                        visited[end][last] = true;
                     }
                 }
             }

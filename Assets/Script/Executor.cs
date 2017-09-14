@@ -58,11 +58,21 @@ public class Executor : MonoBehaviour
         Bath.Add("del ..\\inputSet\\" + tarSet + "\\inputObj\\*.obj");
     }
 
+    public static void clearInputSet_Cube(int tarSet)
+    {
+        //CMD.StandardInput.WriteLine("del ..\\inputSet\\" + tarSet + "\\inputObj\\*.obj");
+        Bath.Add("del ..\\inputSet\\" + tarSet + "\\cubeObj\\*.obj");
+    }
+
     public static List<string> Bath = new List<string>();
     public static List<string> CSG = new List<string>();
 
     public static void mkObjDir(int tarSet) {
         Bath.Add("mkdir ..\\inputSet\\" + tarSet + "\\inputObj\\");
+    }
+    public static void mkCubeObjDir(int tarSet)
+    {
+        Bath.Add("mkdir ..\\inputSet\\" + tarSet + "\\cubeObj\\");
     }
 
     public static void cpoyObjFileInPoolToInputSet(string name, int tarSet, string rename)
@@ -72,6 +82,15 @@ public class Executor : MonoBehaviour
         Bath.Add("copy pool\\" + name + ".obj ..\\inputSet\\" + tarSet + "\\inputObj\\");
         Bath.Add("move ..\\inputSet\\" + tarSet + "\\inputObj\\" + name + ".obj ..\\inputSet\\" + tarSet + "\\inputObj\\" + rename + ".obj");
     }
+
+    public static void cpoyObjFileInPoolToInputSet_Cube(string name, int tarSet, string rename)
+    {
+        //CMD.StandardInput.WriteLine("copy pool\\" + name + ".obj ..\\inputSet\\" + tarSet + "\\inputObj\\");
+        //CMD.StandardInput.WriteLine("move ..\\inputSet\\" + tarSet + "\\inputObj\\" + name + ".obj ..\\inputSet\\" + tarSet + "\\inputObj\\" + rename + ".obj");
+        Bath.Add("copy pool\\" + name + ".obj ..\\inputSet\\" + tarSet + "\\cubeObj\\");
+        Bath.Add("move ..\\inputSet\\" + tarSet + "\\cubeObj\\" + name + ".obj ..\\inputSet\\" + tarSet + "\\cubeObj\\" + rename + ".obj");
+    }
+
     public static void deleteObjFileInPool(string name) {
         //CMD.StandardInput.WriteLine("del pool\\"+name+".obj");
         Bath.Add("del pool\\" + name + ".obj");
@@ -190,7 +209,7 @@ public class Executor : MonoBehaviour
     {
         while (true)
         {
-            Thread.Sleep(50);
+            Thread.Sleep(5);
             bool isempty = true;
             foreach (string x in CSGCommands)
             {

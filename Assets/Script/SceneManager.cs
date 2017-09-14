@@ -21,6 +21,7 @@ public class SceneManager : MonoBehaviour {
         canvas.transform.Find("Panel_Edit").gameObject.SetActive(false);
         canvas.transform.Find("Panel_Generate").gameObject.SetActive(false);
         canvas.transform.Find("Panel_Simulate").gameObject.SetActive(false);
+        canvas.transform.Find("Panel_Cube").gameObject.SetActive(false);
         Tool.clearObj();
     }
     public void openPanelPannel(int tar) {
@@ -30,6 +31,7 @@ public class SceneManager : MonoBehaviour {
         if (tar == 0) canvas.transform.Find("Panel_Edit").gameObject.SetActive(true);
         if (tar == 1) canvas.transform.Find("Panel_Generate").gameObject.SetActive(true);
         if (tar == 2) canvas.transform.Find("Panel_Simulate").gameObject.SetActive(true);
+        if (tar == 3) canvas.transform.Find("Panel_Cube").gameObject.SetActive(true);
     }
 
     public void restartScene() {

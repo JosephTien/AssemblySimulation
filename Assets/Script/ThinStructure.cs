@@ -46,6 +46,8 @@ public class CompInfo {
 }
 
 public class ThinStructure : MonoBehaviour {
+    public static Vector3[] vertices_store;
+    public static Vector3[] splitNorms_store;
     public static Vector3[] vertices;
     public static Edge[] edges;
     public static Vector3[] splitNorms;
@@ -57,6 +59,7 @@ public class ThinStructure : MonoBehaviour {
     public static List<Vector3> edgeCents = new List<Vector3>();
     public static GameObject[] verticeGOs;
     public static GameObject[] edgeGOs;
+    public static GameObject[] planeGOs;
     public static int[][] neighborMap;
     public static int[][] edgeConnMap;
     public static HashSet<int>[] verticesvertices;
@@ -73,10 +76,12 @@ public class ThinStructure : MonoBehaviour {
         edgeVecs = new List<Vector3>();
         edgeCents = new List<Vector3>();
     }
+    
     public static void prepareData() {
         //prepare data
         vertices = new Vector3[verticeNum];
         verticeGOs = new GameObject[verticeNum];
+        planeGOs = new GameObject[edgeNum];
         edges = new Edge[edgeNum];
         edgeGOs = new GameObject[edgeNum];
         splitNorms = new Vector3[edgeNum];
@@ -106,7 +111,7 @@ public class ThinStructure : MonoBehaviour {
             for (int j = 0; j < edgeNum; j++) edgeConnMap[i][j] = -1;
         }
     }
-
+    
     public static int groupnum;
     public static HashSet<int>[] vertgroup;
     public static HashSet<int> importantVert;
@@ -549,6 +554,7 @@ public class ThinStructure : MonoBehaviour {
             go.transform.localScale = new Vector3(tuberadii*2, tuberadii * 2, tuberadii * 2);
             go.transform.parent = GameObject.Find("Collect").transform;
             verticeGOs[i]=go;
+            go.name = "Vert_" + i;
         }
         for (int i = 0; i < edgeNum; i++)
         {
@@ -567,6 +573,47 @@ public class ThinStructure : MonoBehaviour {
             go.transform.localScale = new Vector3(tuberadii * 2, (v1 - v2).magnitude / 2, tuberadii * 2);
             go.transform.parent = GameObject.Find("Collect").transform;
             edgeGOs[i] = go;
+            go.name = "Edge_" + i;
+            /**/
+            GameObject plane = GameObject.Instantiate(Resources.Load("Plane3"), cent, fromto) as GameObject;
+            plane.transform.parent = GameObject.Find("Assist").transform;
+            plane.transform.localScale = new Vector3(tuberadii * 5, (v1 - v2).magnitude / 2, tuberadii * 5);
+            planeGOs[i] = plane;
+            plane.name = "Plane_" + i;
+            /**/
+        }
+    }
+
+    public static void rotate(Quaternion q) {
+        for (int i = 0; i < verticeNum; i++) {
+            vertices[i] = q * vertices[i];
+        }
+        for (int i = 0; i < edgeNum; i++) {
+            splitNorms[i] = q * splitNorms[i];
+        }
+    }
+    public static void store() {
+        vertices_store = new Vector3[verticeNum];
+        splitNorms_store = new Vector3[edgeNum];
+        for (int i = 0; i < verticeNum; i++) {
+            vertices_store[i] = vertices[i];
+        }
+        for (int i = 0; i < edgeNum; i++)
+        {
+            splitNorms_store[i] = splitNorms[i];
+        }
+    }
+    public static void restore()
+    {
+        vertices = new Vector3[verticeNum];
+        splitNorms = new Vector3[edgeNum];
+        for (int i = 0; i < verticeNum; i++)
+        {
+            vertices[i] = vertices_store[i];
+        }
+        for (int i = 0; i < edgeNum; i++)
+        {
+            splitNorms[i] = splitNorms_store[i];
         }
     }
 }

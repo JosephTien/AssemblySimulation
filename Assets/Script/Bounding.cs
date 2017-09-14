@@ -68,9 +68,10 @@ public class Bounding : MonoBehaviour {
             float len = (v2 - v1).magnitude;
             float f1 = ThinStructure.edges[i].fixDis1;
             float f2 = ThinStructure.edges[i].fixDis2;
+            bool isreal = true;
             if (f1 + f2 > len) {
                 f1 = f2 = len / 2;
-                continue;
+                isreal = false;
             }
             v1 += vec * f1;
             v2 -= vec * f2;
@@ -84,8 +85,10 @@ public class Bounding : MonoBehaviour {
             go.transform.parent = GameObject.Find("Collect").transform;
             go.name = "Edge_" + i;
             /**********************************************************/
+            if (!isreal) go.GetComponent<CapsuleCollider>().enabled = false;
             go.AddComponent<BoundInfo>();
             boundInfo[i] = go.GetComponent<BoundInfo>();
+            boundInfo[i].isreal = isreal;
             boundInfo[i].initNorm = norm;
             boundInfo[i].axis = vec;
             boundInfo[i].len = 20;
@@ -317,13 +320,20 @@ public class Bounding : MonoBehaviour {
         {
             if (!boundInfo[i]) continue;
             if (debug) print("cal edge" + i + "'s bound");
-            boundInfo[i].checkAllBound();
-            //boundInfo[i].findBestBound();
-            if (compIdx[i] == -1)
-                boundInfo[i].solved = 2;
+            if (boundInfo[i].isreal) {
+                boundInfo[i].checkAllBound();
+                //boundInfo[i].findBestBound();
+                if (compIdx[i] == -1)
+                    boundInfo[i].solved = 2;
+                else
+                    boundInfo[i].solved = boundInfo[i].isSoled();
+                ThinStructure.splitNorms[i] = boundInfo[i].curNorm;
+            }
             else
-                boundInfo[i].solved = boundInfo[i].isSoled();
-            ThinStructure.splitNorms[i] = boundInfo[i].curNorm;
+            {
+                boundInfo[i].solved = 2;
+                ThinStructure.splitNorms[i] = Vector3.zero;
+            }
             GameObject.Find("Canvas/Msg").GetComponent<UnityEngine.UI.Text>().text = (i + 1) + "/" + ThinStructure.edgeNum;
             yield return new WaitForSeconds(0.01f);
         }
@@ -465,11 +475,13 @@ public class Bounding : MonoBehaviour {
         StringBuilder sb = new StringBuilder();
         for (int i = ThinStructure.edgeNum; i < boundInfo.Length; i++)
         {
-            sb.Append(boundInfo[i].solved + "\n");
+            if(boundInfo[i])sb.Append(boundInfo[i].solved + "\n");
+            else sb.Append("2\n");
         }
         for (int i = 0; i < ThinStructure.edgeNum; i++)
         {
-            sb.Append(boundInfo[i].solved + "\n");
+            if (boundInfo[i]) sb.Append(boundInfo[i].solved + "\n");
+            else sb.Append("2\n");
         }
         string filename = "inputSet\\" + ThinStructure.curSet + "\\input\\solvedinfo.txt";
         using (StreamWriter sw = new StreamWriter(filename))
@@ -1102,7 +1114,12 @@ public class Bounding : MonoBehaviour {
                 BoundInfo bi = hit.collider.gameObject.GetComponentInChildren<BoundInfo>();
                 if (bi.isvert) {
                     bool isin = false;
-                    Vector3 dir = new Vector3(Random.Range(-2, 2), Random.Range(-2, 2), Random.Range(-2, 2));
+                    int r = Random.Range(-4, 4);
+                    Vector3 dir;
+                    if (r == 1 || r == -1) dir = new Vector3(1, 0, 0);
+                    else if (r == 2 || r == -2) dir = new Vector3(0, 1, 0);
+                    else dir = new Vector3(0, 0, 1);
+                    if (r < 0) dir *= -1;
                     //HoleInfo hi = new HoleInfo(bi.idx, Tool.randomVector());
                     HoleInfo hi = new HoleInfo(bi.idx, dir);
                     foreach (HoleInfo hii in holeInfos) {
@@ -1176,3 +1193,4 @@ public class Bounding : MonoBehaviour {
 //接水方向
 
 //zero rotation 在選endnode的時候
+//太接近的node

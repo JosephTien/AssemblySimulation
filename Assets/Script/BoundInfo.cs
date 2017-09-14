@@ -5,6 +5,7 @@ public class BoundInfo : MonoBehaviour
 {
     public bool test = false;
     public bool isvert = false;
+    public bool isreal = false;
     public int solved = 2;
     public bool showstate = false;
     public bool showgroup = false;
