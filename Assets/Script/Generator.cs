@@ -132,7 +132,13 @@ public class MeshComponent{
         return new Vector3(a.x * b.x, a.y * b.y, a.z * b.z);
     }
 
-    public void AppendMesh(GameObject appendee) {
+    public void AppendMesh(GameObject appendee)
+    {
+        AppendMesh(instance, appendee);
+        filed = false;
+    }
+
+    public static GameObject AppendMesh(GameObject instance, GameObject appendee) {
         Mesh mesher = instance.GetComponent<MeshFilter>().mesh;
         Mesh meshee = appendee.GetComponent<MeshFilter>().mesh;
         int meshernum = mesher.vertexCount;
@@ -169,14 +175,73 @@ public class MeshComponent{
         mesher.normals = normals;
         mesher.triangles = triangles;
         mesher.RecalculateBounds();
+        mesher.RecalculateNormals();
         instance.transform.position = Vector3.zero;
         instance.transform.localScale = Vector3.one;
         instance.transform.localRotation = Quaternion.identity;
-        filed = false;
+        return instance;
     }
+    public static GameObject AppendMesh(GameObject instance, GameObject[] appendees)
+    {
+        Mesh mesher = instance.GetComponent<MeshFilter>().mesh;
+        int meshervertnum = mesher.vertexCount;
+        int meshertrinum = mesher.vertexCount;
+        int mesheenumsum = 0;
+        int mesheetrinumsum = 0;
+        for (int n = 0; n < appendees.Length; n++)
+        {
+            GameObject appendee = appendees[n];
+            Mesh meshee = appendee.GetComponent<MeshFilter>().mesh;
+            mesheenumsum += meshee.vertexCount;
+            mesheetrinumsum += meshee.triangles.Length;
+        }
+        Vector3[] vertices = new Vector3[meshervertnum + mesheenumsum];
+        Vector3[] normals = new Vector3[meshervertnum + mesheenumsum];
+        int[] triangles = new int[mesher.triangles.Length + mesheetrinumsum];
+        for (int i = 0; i < meshertrinum; i++)
+        {
+            Transform t = instance.transform;
+            vertices[i] = t.rotation * mul(t.lossyScale, mesher.vertices[i]) + t.position;
+            normals[i] = t.rotation * mesher.normals[i];
+        }
+        for (int i = 0; i < mesher.triangles.Length; i++)
+        {
+            triangles[i] = mesher.triangles[i];
+        }
+        int vertprefix = meshervertnum;
+        int triprefix = meshertrinum;
+        for (int n = 0; n < appendees.Length; n++) {
+            GameObject appendee = appendees[n];
+            Mesh meshee = appendee.GetComponent<MeshFilter>().mesh;
+            int mesheevertnum = meshee.vertexCount;
+            int meshtrunum = meshee.triangles.Length;
+            for (int i = 0; i < mesheevertnum; i++)
+            {
+                Transform t = appendee.transform;
+                vertices[i + vertprefix] = t.rotation * mul(t.lossyScale, meshee.vertices[i]) + t.position;
+                normals[i + vertprefix] = t.rotation * meshee.normals[i];
+                //vertices[i + meshernum] = meshee.vertices[i];
+                //normals[i + meshernum] = meshee.normals[i];
+            }for (int i = 0; i < meshee.triangles.Length; i++)
+            {
+                triangles[triprefix + i] = meshee.triangles[i] + triprefix;
+            }
 
+            vertprefix += mesheevertnum;
+            triprefix += meshtrunum;
+        }
+        mesher.vertices = vertices;
+        mesher.normals = normals;
+        mesher.triangles = triangles;
+        mesher.RecalculateBounds();
+        mesher.RecalculateNormals();
+        instance.transform.position = Vector3.zero;
+        instance.transform.localScale = Vector3.one;
+        instance.transform.localRotation = Quaternion.identity;
+        return instance;
+    }
     string MeshToString() {
-        Mesh mesh = instance.GetComponent<MeshFilter>().sharedMesh;
+        Mesh mesh = instance.GetComponent<MeshFilter>().mesh;
         Vector3[] vertices = new Vector3[mesh.vertexCount];
         Vector3[] normals = new Vector3[mesh.vertexCount];
         for (int i = 0; i < mesh.vertexCount; i++) {
@@ -199,6 +264,42 @@ public class MeshComponent{
         }
         sb.Append("\n");
         
+        int[] triangles = mesh.triangles;
+        for (int i = 0; i < triangles.Length; i += 3)
+        {
+            //sb.Append(string.Format("f {2}//{2} {1}//{1} {0}//{0}\n",
+            //    triangles[i] + 1, triangles[i + 1] + 1, triangles[i + 2] + 1));
+            sb.Append(string.Format("f {0}//{0} {1}//{1} {2}//{2}\n",
+                triangles[i] + 1, triangles[i + 1] + 1, triangles[i + 2] + 1));
+        }
+        return sb.ToString();
+    }
+    public static string MeshToString(GameObject instance)
+    {
+        Mesh mesh = instance.GetComponent<MeshFilter>().sharedMesh;
+        Vector3[] vertices = new Vector3[mesh.vertexCount];
+        Vector3[] normals = new Vector3[mesh.vertexCount];
+        for (int i = 0; i < mesh.vertexCount; i++)
+        {
+            Transform t = instance.transform;
+            vertices[i] = t.rotation * mul(t.lossyScale, mesh.vertices[i]) + t.position;
+            normals[i] = t.rotation * mesh.normals[i];
+        }
+        StringBuilder sb = new StringBuilder();
+        foreach (Vector3 lv in vertices)
+        {
+            //sb.Append(string.Format("v {0} {1} {2}\n", -lv.x, lv.y, lv.z));
+            sb.Append(string.Format("v {0} {1} {2}\n", lv.x, lv.y, lv.z));
+        }
+        sb.Append("\n");
+
+        foreach (Vector3 lv in normals)
+        {
+            //sb.Append(string.Format("vn {0} {1} {2}\n", -lv.x, lv.y, lv.z));
+            sb.Append(string.Format("vn {0} {1} {2}\n", lv.x, lv.y, lv.z));
+        }
+        sb.Append("\n");
+
         int[] triangles = mesh.triangles;
         for (int i = 0; i < triangles.Length; i += 3)
         {
@@ -580,7 +681,7 @@ public class Generator : MonoBehaviour {
     public static MeshComponent[] Complist = new MeshComponent[5000];//need more
     int curComp = 0;
     int compNum;
-    int tarSet = 13;//13or4
+    public static int tarSet = 13;//13or4
     public static bool forcebreak = true;
     public static bool advanceSpeedup = false;//some problem (wrong matrix?)
     public bool singleEdgeSp = false;
@@ -1293,6 +1394,22 @@ public class Generator : MonoBehaviour {
         return newtar;
     }
 
+    GameObject copyCompByInst(GameObject obj)
+    {
+        GameObject Comp = GameObject.Instantiate(Resources.Load("Comp"), Vector3.zero, Quaternion.identity) as GameObject;
+        Comp.transform.parent = GameObject.Find("Collect").transform;
+        Comp.name = "Comp_" + (curComp++);
+        //int newtar = curComp - 1;
+        int newtar = getNewCompTar();
+        GameObject Inst = Instantiate(obj, Comp.transform);
+        //Inst.transform.localScale = Complist[tar].Instance.transform.localScale;
+        //Inst.transform.position = Complist[tar].Instance.transform.position;
+        MeshComponent mc = new MeshComponent("comp_" + newtar, Inst);
+        Pool.list.Add(mc);
+        Complist[curComp - 1] = mc;
+        return mc.Instance;
+    }
+
     GameObject copyCompByInst(int tar, Quaternion rotation)
     {
         GameObject Comp = GameObject.Instantiate(Resources.Load("Comp"), Vector3.zero, Quaternion.identity) as GameObject;
@@ -1401,14 +1518,14 @@ public class Generator : MonoBehaviour {
     /**********************************************************************************************************************************************/
     /**********************************************************************************************************************************************/
     /**********************************************************************************************************************************************/
-    static float iR = 0.1f;
+    public static float iR = 0.1f;
     static float oR = 0.3f;
     static float oRold = oR;
     static float cR = (oR + iR) / 2;
     static float ccR = (oR + cR) / 2;
     //static float hR = 0.14f;
     static float hR = cR;
-    static float mul = 50;
+    public static float mul = 50;
     static float iRreal = iR * mul;
     static float oRreal = oR * mul;
     static float oRoldreal = oRold * mul;
@@ -2809,7 +2926,8 @@ public class Generator : MonoBehaviour {
         CSGMergeComp(curComp - 1);
     }
     bool fineinside = false;
-    void genThinComp() {
+
+    public void genThinComp() {
         if (!geninside) {
             genNull();
             return;
@@ -2909,9 +3027,87 @@ public class Generator : MonoBehaviour {
         CSGMergeComp(curComp - 1);
         return curComp - 1;
     }
+    public IEnumerator igenShape() {
+        forcebreak = false;
+        tarSet = CubeVolumn.tarSet;
+        UnityEngine.UI.Text Text1 = GameObject.Find("Canvas/Text").GetComponent<UnityEngine.UI.Text>();
+        UnityEngine.UI.Text Text2 = GameObject.Find("Canvas/Text2").GetComponent<UnityEngine.UI.Text>();
+        while (!CSGQueue.isEmpty() || Pool.lockNum > 0)
+        {
+            if (forcebreak) break;
+            Text1.text = "CSG Waiting : " + Executor.CSGCommandsCnt + " / " + CSGQueue.totalCommand;
+            Text2.text = Executor.curCommand;
+            yield return new WaitForSeconds(0);
+        }
+        if (forcebreak) yield return 0;
+        int pmc = CubeVolumn.pieceGroup.Count;
+        /**/
+        while (!CSGQueue.isEmpty() || Pool.lockNum > 0){yield return new WaitForSeconds(0);}
+        /**/
+        GameObject.Find("Canvas/Text").GetComponent<UnityEngine.UI.Text>().text = "Writing...";
+        Executor.clearInputSet_Cube(tarSet);
+        Executor.mkCubeObjDir(tarSet);
+        Executor.cpoyObjFileInPoolToInputSet_Cube(Complist[0].Name, tarSet, "output_0");
+        for (int i = 0; i < pmc; i++)
+        {
+            Executor.cpoyObjFileInPoolToInputSet_Cube("comp_" + i, tarSet, "output_" + (i + 1));
+        }
+        Executor.flushBath();
+        GameObject.Find("Canvas/Text").GetComponent<UnityEngine.UI.Text>().text = "Done!";
+        if (Executor.allinone)
+        {
+            if (!advanceSpeedup)
+            {
+                Executor.flushCSG();
+            }
+            else
+            {
+                Executor.flushCSG_advance();
+            }
+            GameObject.Find("Canvas/Text").GetComponent<UnityEngine.UI.Text>().text = "Need Manual Scripting!";
+        }
+        pushed = false;
+    }
+    public void genShape() {
+        addSample();
+        pushed = true;
+        genThinComp();
+        CSGQueue.addCSGSet("+", Complist[0].Name, Complist[0].Name, "null");
+        for (int i = 0; i < CubeVolumn.pieceGroupArr.Length; i++)
+        {
+            copyCompByInst(CubeVolumn.pieceGroupArr[i].instance);
+            CSGQueue.addCSGSet("-", "comp_" + i, "comp_" + i, Complist[0].Name);
+        }
+        StartCoroutine(igenShape());
+    }
+
+    public void genShapeScript() {
+        StringBuilder sb = new StringBuilder();
+        sb.Append(string.Format("{0} {1} {2} ", CubeVolumn.min.x, CubeVolumn.min.y, CubeVolumn.min.z));
+        sb.Append(string.Format("{0} {1} {2}\n", CubeVolumn.max.x, CubeVolumn.max.y, CubeVolumn.max.z));
+        sb.Append(string.Format("{0} {1}\n", CubeVolumn.splitNormUsage.Length, CubeVolumn.pieceGroupArr.Length));
+        foreach (SplitNormInfo sni in CubeVolumn.splitNormUsage) {
+            sb.Append(string.Format("{0} {1} {2} ", sni.cent.x, sni.cent.y, sni.cent.z));
+            sb.Append(string.Format("{0} {1} {2}\n", sni.norm.x, sni.norm.y, sni.norm.z));
+        }
+        foreach(PieceGroupInfo pgi in CubeVolumn.pieceGroup){
+            sb.Append(pgi.pieces.Count + "\n");
+            foreach (string str in pgi.pieces) {
+                sb.Append(str + "\n");
+            }
+        }
+        string filename = @"CSGCommandLineTool\slice.txt";
+        using (StreamWriter sw = new StreamWriter(filename))
+        {
+            sw.Write(sb.ToString());
+        }
+    }
 
     public void genCubeVolumn()
     {
+        bool quick = true;
+        genShapeScript();
+        //***********************
         if (pushed) return;
         Tool.clearObj();
         addSample();
@@ -2937,7 +3133,7 @@ public class Generator : MonoBehaviour {
                 {
                     if (chs[i] == '*') CSGQueue.addCSGSet_skip("-", Complist[tar].Name, Complist[tar].Name, Complist[(i * 2 + 1) + 1].Name);
                     if (chs[i] == '-') CSGQueue.addCSGSet_skip("-", Complist[tar].Name, Complist[tar].Name, Complist[(i * 2) + 1].Name);
-                    CSGQueue.addCSGSet_skip(chs[i] + "", Complist[tar].Name, Complist[tar].Name, Complist[(i * 2) + 1].Name);
+                    //CSGQueue.addCSGSet_skip(chs[i] + "", Complist[tar].Name, Complist[tar].Name, Complist[(i * 2) + 1].Name);
                 }
                 if (isfirst)
                 {
@@ -2949,16 +3145,16 @@ public class Generator : MonoBehaviour {
                 }
                 isfirst = true;
             }
-            CSGQueue.addCSGSet("+", Complist[tar - 1].Name, Complist[tar - 1].Name, "null");
+            if(!quick) CSGQueue.addCSGSet("+", Complist[tar - 1].Name, Complist[tar - 1].Name, "null");
         }
         int thinTar = curComp;
-        genThinComp();
+        if (!quick) genThinComp();
         CSGQueue.addCSGSet("+", Complist[0].Name, Complist[0].Name, "null");
         int pmc = CubeVolumn.pieceGroup.Count;
         for (int i = 0; i < pmc; i++)
         {
-            int tar = i + ThinStructure.edgeNum * 2 + 1;
-            CSGQueue.addCSGSet("-", Complist[tar].Name, Complist[tar].Name, Complist[thinTar].Name);
+            int tar = i + CubeVolumn.splitNormUsage.Length*2 + 1;
+            if (!quick) CSGQueue.addCSGSet("-", Complist[tar].Name, Complist[tar].Name, Complist[thinTar].Name);
         }
         StartCoroutine(IoutputCubeVolumn());
     }

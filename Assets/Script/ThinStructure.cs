@@ -42,7 +42,6 @@ public class CompInfo {
     public int group_d;
     public Vector3 norm;
     public AngleArg angleArg;
-
 }
 
 public class ThinStructure : MonoBehaviour {
@@ -186,7 +185,6 @@ public class ThinStructure : MonoBehaviour {
             vertgroup[e.idx2].Add(e.group);
         }
     }
-    
     public static void readFromImpoSet(int tar)
     {
         curSet = tar;
@@ -240,7 +238,86 @@ public class ThinStructure : MonoBehaviour {
         edges = edges_temp.ToArray();
         reGenDetail();
     }
-   
+    public static void basicRead(string path)
+    {
+        string line;
+        string[] items;
+        //read vert
+        System.IO.StreamReader file = new System.IO.StreamReader(path + "thinstruct.txt");
+        line = file.ReadLine(); items = line.Split(' ');
+        verticeNum = int.Parse(items[0]);
+        edgeNum = int.Parse(items[1]);
+        //prepare data
+        prepareData();
+        //keep reading
+        for (int i = 0; i < verticeNum; i++)
+        {
+            line = file.ReadLine(); items = line.Split(' ');
+            if (items.Length <= 1) { i--; continue; }
+            vertices[i] = new Vector3(float.Parse(items[0]), float.Parse(items[1]), float.Parse(items[2]));
+            vertices[i] *= myscale;
+        }
+        for (int i = 0; i < edgeNum; i++)
+        {
+            line = file.ReadLine(); items = line.Split(' ');
+            if (items.Length <= 1) { i--; continue; }
+            int v1 = int.Parse(items[0]);
+            int v2 = int.Parse(items[1]);
+            edges[i] = new Edge(v1, v2);
+            neighborMap[v1][v2] = neighborMap[v2][v1] = i;
+            verticesvertices[v1].Add(v2);
+            verticesvertices[v2].Add(v1);
+            verticesedges[v1].Add(i);
+            verticesedges[v2].Add(i);
+        }
+        file.Close();
+        //set edgeConnMap
+        for (int k = 0; k < verticeNum; k++)
+        {
+            foreach (int i in verticesedges[k])
+            {
+                foreach (int j in verticesedges[k])
+                {
+                    edgeConnMap[i][j] = edgeConnMap[j][i] = k;
+                }
+            }
+        }
+
+        //fix angle distance
+        fixAngleDistance();
+
+        //read splitInfo
+        if (File.Exists(path + "splitinfo.txt"))
+        {
+            file = new System.IO.StreamReader(path + "splitinfo.txt");
+            for (int i = 0; i < edgeNum; i++)
+            {
+                line = file.ReadLine(); items = line.Split(' ');
+                if (items.Length <= 1) { i--; continue; }
+                splitNorms[i] = new Vector3(float.Parse(items[0]), float.Parse(items[1]), float.Parse(items[2]));
+                Vector3 vec = vertices[edges[i].idx1] - vertices[edges[i].idx2];
+                splitNorms[i] = Vector3.Cross(Vector3.Cross(vec, splitNorms[i]), vec).normalized;
+                if (items.Length == 7)
+                {
+                    angleArgs[i].angle2 = float.Parse(items[3]);
+                    angleArgs[i].angle3 = float.Parse(items[4]);
+                    angleArgs[i].angle2_2 = float.Parse(items[5]);
+                    angleArgs[i].angle3_2 = float.Parse(items[6]);
+                }
+                if (items.Length == 9)
+                {
+                    angleArgs[i].dir1 = new Vector3(float.Parse(items[3]), float.Parse(items[4]), float.Parse(items[5]));
+                    angleArgs[i].dir2 = new Vector3(float.Parse(items[6]), float.Parse(items[7]), float.Parse(items[8]));
+                }
+            }
+            file.Close();
+        }
+        else {
+            for (int i = 0; i < splitNorms.Length; i++) {
+                splitNorms[i] = Tool.calPerpend(edges[i].vec, new Vector3(0, 0, 1));
+            }
+        }
+    }
     public static void basicRead(int tar)
     {
         curSet = tar;
@@ -365,9 +442,7 @@ public class ThinStructure : MonoBehaviour {
             }
             file.Close();
         }
-
     }
-
     public static void addEdge(int vi1, int vi2) {
         int newgroup = -1;
         foreach (int g1 in vertgroup[vi1])
@@ -395,8 +470,6 @@ public class ThinStructure : MonoBehaviour {
         newedges.RemoveAt(ei);
         reGenDetail(vertices, newedges.ToArray());
     }
-
-
     public static void reGenDetail(Vector3[] vertices, Edge[] edges)
     {
         verticeNum = vertices.Length;
@@ -428,7 +501,6 @@ public class ThinStructure : MonoBehaviour {
             }
         }
     }
-
     public static void fixLinkinfo() {
         for (int i = 0; i < verticeNum; i++)
         {
@@ -438,7 +510,42 @@ public class ThinStructure : MonoBehaviour {
             }
         }
     }
+    public static void outputThin(string path)
+    {
+        //write linkinfo
+        StringBuilder sb = new StringBuilder();
+        sb.Append(string.Format("{0} {1}\n", verticeNum, edgeNum));
 
+        for (int i = 0; i < verticeNum; i++)
+        {
+            Vector3 v = vertices[i] / myscale;
+            sb.Append(string.Format("{0} {1} {2}\n", v.x, v.y, v.z));
+        }
+        for (int i = 0; i < edgeNum; i++)
+        {
+            sb.Append(string.Format("{0} {1}\n", edges[i].idx1, edges[i].idx2));
+        }
+        string filename = path + "thinstruct.txt";
+        using (StreamWriter sw = new StreamWriter(filename))
+        {
+            sw.Write(sb.ToString());
+        }
+    }
+    public static void outputsplitNorms(string path)
+    {
+        //write splitInfo
+        StringBuilder sb = new StringBuilder();
+        for (int i = 0; i < edgeNum; i++)
+        {
+            Vector3 splitNorm = splitNorms[i];
+            sb.Append(string.Format("{0} {1} {2} \n", splitNorm.x, splitNorm.y, splitNorm.z));
+        }
+        string filename = path + "splitinfo.txt";
+        using (StreamWriter sw = new StreamWriter(filename))
+        {
+            sw.Write(sb.ToString());
+        }
+    }
     public static void outputThin(int setnum) {
         //write linkinfo
         StringBuilder sb = new StringBuilder();
@@ -459,7 +566,6 @@ public class ThinStructure : MonoBehaviour {
             sw.Write(sb.ToString());
         }
     }
-
     public static void outputlinkInfo(int setnum)
     {
         //write linkinfo
@@ -544,14 +650,17 @@ public class ThinStructure : MonoBehaviour {
             edges[i].fixDis2 = Algorithm.angleFix(i, 1, tuberadii);
         }
     }
-
+    public static void setColor(Color color) {
+        foreach (GameObject go in verticeGOs) Tool.setColor(go, color);
+        foreach (GameObject go in edgeGOs) Tool.setColor(go, color);
+    }
     public static void basicPut()
     {
         for (int i = 0; i < verticeNum; i++)
         {
             Vector3 vertice = vertices[i];
             GameObject go = GameObject.Instantiate(Resources.Load("Sphere"), vertice, Quaternion.identity) as GameObject;
-            go.transform.localScale = new Vector3(tuberadii*2, tuberadii * 2, tuberadii * 2);
+            go.transform.localScale = new Vector3(tuberadii * 2, tuberadii * 2, tuberadii * 2);
             go.transform.parent = GameObject.Find("Collect").transform;
             verticeGOs[i]=go;
             go.name = "Vert_" + i;
@@ -580,16 +689,20 @@ public class ThinStructure : MonoBehaviour {
             plane.transform.localScale = new Vector3(tuberadii * 5, (v1 - v2).magnitude / 2, tuberadii * 5);
             planeGOs[i] = plane;
             plane.name = "Plane_" + i;
+            plane.SetActive(false);
             /**/
         }
     }
-
     public static void rotate(Quaternion q) {
         for (int i = 0; i < verticeNum; i++) {
             vertices[i] = q * vertices[i];
         }
         for (int i = 0; i < edgeNum; i++) {
-            splitNorms[i] = q * splitNorms[i];
+            Vector3 c = ThinStructure.edges[i].cent;
+            Vector3 t = c+splitNorms[i].normalized;
+            c = q * c;
+            t = q * t;
+            splitNorms[i] = t-c;
         }
     }
     public static void store() {
@@ -614,6 +727,101 @@ public class ThinStructure : MonoBehaviour {
         for (int i = 0; i < edgeNum; i++)
         {
             splitNorms[i] = splitNorms_store[i];
+        }
+    }
+    public static Vector3 calMinBounding()
+    {
+        int plus = 15;
+        List<Quaternion> tq = new List<Quaternion>();
+        for (int x = 0; x < 360; x += plus)
+        {
+            for (int y = 0; y < 360; y += plus)
+            {
+                for (int z = 0; z < 360; z += plus)
+                {
+                    tq.Add(Quaternion.Euler(x, y, z));
+                }
+            }
+        }
+        store();
+        /**/
+        Vector3 max, min;
+        calBounding(out max, out min);
+        Vector3 dis = max - min;
+        float minVol = dis.x * dis.y * dis.z;
+        Quaternion minq = Quaternion.identity;
+        foreach (Quaternion q in tq)
+        {
+            ThinStructure.restore();
+            ThinStructure.rotate(q);
+            calBounding(out max, out min);
+            dis = max - min;
+            float vol = dis.x * dis.y * dis.z;
+            if (vol < minVol)
+            {
+                minVol = vol;
+                minq = q;
+            }
+        }
+        /**/
+        ThinStructure.restore();
+        ThinStructure.rotate(minq);
+        calBounding(out max, out min);
+        return (min + max) / 2;
+    }
+    public static void calBounding(out Vector3 max, out Vector3 min)
+    {
+        /*************************************************/
+        //邊值計算
+        max = new Vector3(float.MinValue, float.MinValue, float.MinValue);
+        min = new Vector3(float.MaxValue, float.MaxValue, float.MaxValue);
+        for (int i = 0; i < ThinStructure.verticeNum; i++)
+        {
+            Vector3 v = ThinStructure.vertices[i];
+            max.x = Mathf.Max(max.x, v.x);
+            max.y = Mathf.Max(max.y, v.y);
+            max.z = Mathf.Max(max.z, v.z);
+            min.x = Mathf.Min(min.x, v.x);
+            min.y = Mathf.Min(min.y, v.y);
+            min.z = Mathf.Min(min.z, v.z);
+        }
+    }
+    public static void moveToCenter(Vector3 center)
+    {
+        for (int i = 0; i < vertices.Length; i++) {
+            vertices[i] -= center;
+        }
+    }
+    public static void scale(float val) {
+        for (int i = 0; i < vertices.Length; i++) {
+            vertices[i] *= val;
+        }
+    }
+    public static float calTotalAngDif(float[] angles) {
+        Vector3[] norm = new Vector3[splitNorms.Length];
+        for (int i = 0; i < splitNorms.Length; i++) {
+            norm[i] = Quaternion.AngleAxis(angles[i], edges[i].vec) * splitNorms[i];
+        }
+        float angle = 0;
+        for (int i = 0; i < vertices.Length; i++)
+        {
+            foreach (int e1 in verticesedges[i])
+            {
+                foreach (int e2 in verticesedges[i])
+                {
+                    if (e1 == e2) continue;
+                    float a = Vector3.Angle(norm[e1], norm[e2]);
+                    angle += a > 90 ? a : 180 - a;
+                }
+            }
+        }
+        return angle;
+    }
+    public static void applyAngles(float[] angles)
+    {
+        for (int i = 0; i < splitNorms.Length; i++)
+        {
+            splitNorms[i] = Quaternion.AngleAxis(angles[i], edges[i].vec) * splitNorms[i];
         }
     }
 }

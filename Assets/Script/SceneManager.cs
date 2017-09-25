@@ -4,16 +4,24 @@ using UnityEngine;
 using UnityEngine.SceneManagement;
 
 public class SceneManager : MonoBehaviour {
-
-	// Use this for initialization
-	void Start () {
-		
-	}
-	
-	// Update is called once per frame
-	void Update () {
-		
-	}
+    Transform ToDelete = null;
+    // Use this for initialization
+    void Start () {
+        ToDelete = GameObject.Find("ToDelete").transform;
+    }
+    float deltaTime = 0;
+    private void FixedUpdate()
+    {
+        deltaTime += Time.deltaTime;
+        if (deltaTime > 0.3 && ToDelete.childCount > 0) {
+            Destroy(ToDelete.GetChild(0).gameObject);
+        } 
+    }
+    // Update is called once per frame
+    void Update () {
+        
+        
+    }
 
     public void closeAllPanel() {
         GameObject canvas = GameObject.Find("Canvas");

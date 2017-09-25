@@ -16,7 +16,17 @@ public class Touchinfo
 {
     public bool isup;
     public int contactedge;
+    public Vector3 va, vb;
+    public GameObject cavityinstance = null;
     public Vector3 dir = Vector3.zero;
+    public void setisup(Vector3 pos) {
+        Vector3 cent = ThinStructure.edges[contactedge].cent;
+        Vector3 norm = ThinStructure.splitNorms[contactedge];
+        Vector3 vec = pos - cent;
+        if (Vector3.Dot(norm, vec) >= 0) isup = true;
+        else isup = false;
+        if (!isup) dir *= -1;
+    }
 }
 public class Cubic {
     public uint[] vals;

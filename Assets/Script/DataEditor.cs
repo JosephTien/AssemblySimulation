@@ -21,7 +21,8 @@ public class DataEditor : MonoBehaviour {
         try
         {
             //GameObject.Find("Canvas/InputField_Input").GetComponent<UnityEngine.UI.InputField>().text = "1031*1000";
-            GameObject.Find("Canvas/InputField_Input").GetComponent<UnityEngine.UI.InputField>().text = "103";
+            //GameObject.Find("Canvas/InputField_Input").GetComponent<UnityEngine.UI.InputField>().text = "103";
+            GameObject.Find("Canvas/InputField_Input").GetComponent<UnityEngine.UI.InputField>().text = "100 * 500";
             GameObject.Find("Canvas/Panel_Lin/InputField_Thre").GetComponent<UnityEngine.UI.InputField>().text = "1";
         }
         catch { }
@@ -616,7 +617,8 @@ public class DataEditor : MonoBehaviour {
     }
 
     public void putEdited() {
-        Tool.clearObj();
+        //Tool.clearObj();
+        Tool.clearObj_immed();
         float tuberadii = ThinStructure.tuberadii;
         for (int i = 0; i < ThinStructure.verticeNum; i++)
         {

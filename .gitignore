@@ -2,12 +2,19 @@
 *.csproj
 Library/*
 ProjectSettings/*
+Assets/Standard Assets/*
 Temp/*
 .vs/
 obj/*
 Exe/*
 bkup/*
 inputSet/**/inputObj/*
+inputSet/**/cubeObj/*
+data/**/obj/*
 csgcommandlinetool/pool/*_*
 csgcommandlinetool/_.bat
 csgcommandlinetool/*.txt
+slicer/pool/*_*
+slicer/*.txt
+~.bat
+*.obj

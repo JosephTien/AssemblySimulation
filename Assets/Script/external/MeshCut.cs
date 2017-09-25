@@ -117,7 +117,8 @@ namespace BLINDED_AM_ME{
 
 			// The capping Material will be at the end
 			Material[] mats = victim.GetComponent<MeshRenderer>().sharedMaterials;
-			if(mats[mats.Length-1].name != capMaterial.name){
+			if(capMaterial != null && mats[mats.Length-1].name != capMaterial.name)
+            {
 				Material[] newMats = new Material[mats.Length+1];
 				mats.CopyTo(newMats, 0);
 				newMats[mats.Length] = capMaterial;
