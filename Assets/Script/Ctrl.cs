@@ -6,13 +6,15 @@ public class Ctrl : MonoBehaviour {
     Vector3 mouseStart;
     bool mouseDown = false;
     float moveRate = 0.25f;
-    Vector3 xaxis = new Vector3(0, 1, 0);
-    Vector3 yaxis = new Vector3(1, 0, 0);
-    Vector3 move = new Vector3(0, 0, 0);
-    Vector3 realpos = new Vector3(0, 0, 0);
+    static Vector3 xaxis = new Vector3(0, 1, 0);
+    static Vector3 yaxis = new Vector3(1, 0, 0);
+    static Vector3 move = new Vector3(0, 0, 0);
+    static Vector3 realpos = new Vector3(0, 0, 0);
     public static bool valid = true;
     float scrollVal = 30;
     bool reverse = false;
+    static int state = 0;
+    static int statenum = 8;
     void Start () {
         realpos = Camera.main.gameObject.transform.position;
     }
@@ -20,28 +22,38 @@ public class Ctrl : MonoBehaviour {
 	void Update () {
 		
 	}
-
-    int state = 0;
-    int statenum = 3;
-    public void defaultView() {
+    public static void rotateView(float rx, float ry) {
+        //Vector3 campos = Camera.main.gameObject.transform.position;
+        Vector3 campos = realpos;
+        Quaternion camrot = Camera.main.gameObject.transform.rotation;
+        Quaternion rotx = Quaternion.AngleAxis(rx, xaxis);
+        Quaternion roty = Quaternion.AngleAxis(ry, yaxis);
+        Quaternion rot = rotx * roty;
+        realpos = rot * campos;
+        Camera.main.gameObject.transform.rotation = rot * camrot;
+        Camera.main.gameObject.transform.position = realpos + Camera.main.transform.rotation * move;
+        xaxis = rot * xaxis;
+        yaxis = rot * yaxis;
+    }
+    public static void setView(int statetar) {
+        state = statetar - 1;
+        defaultView();
+    }
+    public static void defaultView() {
         state = (state + 1) % statenum;
-        Vector3 xaxis = new Vector3(0, 1, 0);
-        Vector3 yaxis = new Vector3(1, 0, 0);
-        Vector3 move = new Vector3(0, 0, 0);
+        xaxis = new Vector3(0, 1, 0);
+        yaxis = new Vector3(1, 0, 0);
+        move = new Vector3(0, 0, 0);
         realpos = new Vector3(0, 0, -250);
         Quaternion camrot = Quaternion.identity;
-        if (state == 0)
-        {
-            
-        }
-        else if(state == 1)
-        {
-            camrot = Quaternion.Euler(0, 90, 0);
-        }
-        else if (state == 2)
-        {
-            camrot = Quaternion.Euler(0, 0, 90);
-        }
+        if (state == 0) ;
+        else if (state == 1) camrot = Quaternion.Euler(90, 0, 0);
+        else if (state == 2) camrot = Quaternion.Euler(0, 90, 0);
+        else if (state == 3) camrot = Quaternion.Euler(0, 0, 90);
+        else if (state == 4) camrot = Quaternion.Euler(-90, 0, 0);
+        else if (state == 5) camrot = Quaternion.Euler(0, -90, 0);
+        else if (state == 6) camrot = Quaternion.Euler(0, 0, -90);
+        else if (state == 7) camrot = Quaternion.Euler(0, -180, 0);
         Camera.main.gameObject.transform.rotation = camrot;
         realpos = camrot* realpos;
         Camera.main.gameObject.transform.position = realpos;

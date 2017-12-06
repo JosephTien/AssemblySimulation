@@ -1,7 +1,7 @@
 ﻿using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
-using UnityEngine;
+using System.IO;
 
 public class Tool : MonoBehaviour {
 
@@ -175,7 +175,16 @@ public class Tool : MonoBehaviour {
         trs = go.GetComponentsInChildren<Transform>();
         foreach (Transform tr in trs) if (tr.gameObject != go) tr.parent = toDelete;
     }
-    public static IEnumerator clearTodelete() {
+    public static void clearTodelete()
+    {
+        GameObject go;
+        go = GameObject.Find("ToDelete");
+        for (int i = 0; i < go.transform.childCount; i++)
+        {
+            Destroy(go.transform.GetChild(i).gameObject);
+        }
+    }
+    public static IEnumerator iclearTodelete() {
         yield return new WaitForSeconds(0.5f);
         GameObject go;
         go = GameObject.Find("ToDelete");
@@ -191,7 +200,17 @@ public class Tool : MonoBehaviour {
     }
 
     public static void setColor(GameObject go, Color color) {
-        go.GetComponent<MeshRenderer>().material.color = color;
+        if (go.GetComponent<MeshRenderer>() != null)
+        {
+            go.GetComponent<MeshRenderer>().material.color = color;
+        }
+        else {
+            MeshRenderer[] mrs = go.GetComponentsInChildren<MeshRenderer>();
+            foreach (MeshRenderer mr in mrs) {
+                mr.material.color = color;
+            }
+        }
+
     }
     public static void resetColor()
     {
@@ -285,6 +304,157 @@ public class Tool : MonoBehaviour {
         var v123 = p1.x * p2.y * p3.z;
         return (1.0f / 6.0f) * (-v321 + v231 + v312 - v132 - v213 + v123);
     }
+    public static void putIndices(ref List<int> indices, int a, int b, int c, int d) {
+        indices.Add(a);
+        indices.Add(b);
+        indices.Add(c);
+        indices.Add(a);
+        indices.Add(c);
+        indices.Add(d);
+    }
+
+    public static void inputVoxel(GameObject obj, string filename)
+    {
+        bool smooth = false;
+        using (BinaryReader reader = new BinaryReader(File.Open(filename, FileMode.Open)))
+        {
+            int n = reader.ReadInt32();
+            float l = reader.ReadSingle();
+            while (n > 0)
+            {
+                GameObject child = new GameObject("part");
+                child.AddComponent<MeshFilter>();
+                child.AddComponent<MeshRenderer>();
+                child.AddComponent<MeshCollider>();
+                child.transform.parent = obj.transform;
+                List<Vector3> vertices = new List<Vector3>();
+                List<int> indices = new List<int>();
+                int indCnt = 0;
+                int indCntPlus = smooth ? 8 : 36;
+                int simgleNum = smooth ? 8192 : 1820;
+                for (int i = 0; n > 0 && i < simgleNum; i++, indCnt += indCntPlus, n--)
+                {
+                    float x = reader.ReadSingle();
+                    float y = reader.ReadSingle();
+                    float z = reader.ReadSingle();
+                    Vector3 pos = new Vector3(x, y, z);
+                    List<Vector3> vertices_ = new List<Vector3>();
+                    List<int> indices_ = new List<int>();
+                    vertices_.Add(pos + new Vector3(-l / 2, -l / 2, -l / 2));
+                    vertices_.Add(pos + new Vector3(l / 2, -l / 2, -l / 2));
+                    vertices_.Add(pos + new Vector3(l / 2, l / 2, -l / 2));
+                    vertices_.Add(pos + new Vector3(-l / 2, l / 2, -l / 2));
+                    vertices_.Add(pos + new Vector3(-l / 2, -l / 2, l / 2));
+                    vertices_.Add(pos + new Vector3(l / 2, -l / 2, l / 2));
+                    vertices_.Add(pos + new Vector3(l / 2, l / 2, l / 2));
+                    vertices_.Add(pos + new Vector3(-l / 2, l / 2, l / 2));
+                    putIndices(ref indices_, 0, 3, 2, 1);
+                    putIndices(ref indices_, 4, 5, 6, 7);
+                    putIndices(ref indices_, 0, 1, 5, 4);
+                    putIndices(ref indices_, 6, 2, 3, 7);
+                    putIndices(ref indices_, 3, 0, 4, 7);
+                    putIndices(ref indices_, 2, 6, 5, 1);
+                    if (smooth)
+                    {
+                        foreach (Vector3 v in vertices_) vertices.Add(v);
+                        foreach (int t in indices_) indices.Add(t + indCnt);
+                    }
+                    else
+                    {
+                        int tn = indices_.Count;
+                        for (int j = 0; j < tn; j += 3)
+                        {
+                            vertices.Add(vertices_[indices_[j]]);
+                            vertices.Add(vertices_[indices_[j + 1]]);
+                            vertices.Add(vertices_[indices_[j + 2]]);
+                            indices.Add(j + indCnt);
+                            indices.Add(j + 1 + indCnt);
+                            indices.Add(j + 2 + indCnt);
+                        }
+                    }
+                }
+                MeshFilter filter = child.GetComponent<MeshFilter>();
+                MeshCollider collider = child.GetComponent<MeshCollider>();
+                filter.mesh.vertices = vertices.ToArray();
+                filter.mesh.triangles = indices.ToArray();
+                obj.transform.localScale = Vector3.one;
+                filter.mesh.RecalculateNormals();
+                collider.sharedMesh = filter.mesh;
+            }
+        }
+    }
+
+    /*
+     * public static void inputVoxel(GameObject obj, string filename)
+    {
+        bool smooth = false;
+        System.IO.StreamReader file = new System.IO.StreamReader(filename);
+
+        string line = file.ReadLine(); string[] items = line.Split(' ');
+        int n = int.Parse(items[0]);
+        float l = float.Parse(items[1]);
+
+        while (n>0) {
+            GameObject child = new GameObject("part");
+            child.AddComponent<MeshFilter>();
+            child.AddComponent<MeshRenderer>();
+            child.AddComponent<MeshCollider>();
+            child.transform.parent = obj.transform;
+            List<Vector3> vertices = new List<Vector3>();
+            List<int> indices = new List<int>();
+            int indCnt = 0;
+            int indCntPlus = smooth ? 8 : 36;
+            int simgleNum = smooth ? 8192 : 1820;
+            for (int i = 0; n > 0 && i < simgleNum; i++, indCnt += indCntPlus, n--)
+            {
+                line = file.ReadLine(); items = line.Split(' ');
+                float x = float.Parse(items[0]);
+                float y = float.Parse(items[1]);
+                float z = float.Parse(items[2]);
+                Vector3 pos = new Vector3(x, y, z);
+                List<Vector3> vertices_ = new List<Vector3>();
+                List<int> indices_ = new List<int>();
+                vertices_.Add(pos + new Vector3(-l / 2, -l / 2, -l / 2));
+                vertices_.Add(pos + new Vector3(l / 2, -l / 2, -l / 2));
+                vertices_.Add(pos + new Vector3(l / 2, l / 2, -l / 2));
+                vertices_.Add(pos + new Vector3(-l / 2, l / 2, -l / 2));
+                vertices_.Add(pos + new Vector3(-l / 2, -l / 2, l / 2));
+                vertices_.Add(pos + new Vector3(l / 2, -l / 2, l / 2));
+                vertices_.Add(pos + new Vector3(l / 2, l / 2, l / 2));
+                vertices_.Add(pos + new Vector3(-l / 2, l / 2, l / 2));
+                putIndices(ref indices_, 0, 3, 2, 1);
+                putIndices(ref indices_, 4, 5, 6, 7);
+                putIndices(ref indices_, 0, 1, 5, 4);
+                putIndices(ref indices_, 6, 2, 3, 7);
+                putIndices(ref indices_, 3, 0, 4, 7);
+                putIndices(ref indices_, 2, 6, 5, 1);
+                if (smooth)
+                {
+                    foreach (Vector3 v in vertices_) vertices.Add(v);
+                    foreach (int t in indices_) indices.Add(t+ indCnt);
+                }
+                else {
+                    int tn = indices_.Count;
+                    for (int j = 0; j < tn; j+=3) {
+                        vertices.Add(vertices_[indices_[j]]);
+                        vertices.Add(vertices_[indices_[j+1]]);
+                        vertices.Add(vertices_[indices_[j+2]]);
+                        indices.Add(j + indCnt);
+                        indices.Add(j + 1 + indCnt);
+                        indices.Add(j + 2 + indCnt);
+                    }
+                }
+            }
+            MeshFilter filter = child.GetComponent<MeshFilter>();
+            MeshCollider collider = child.GetComponent<MeshCollider>();
+            filter.mesh.vertices = vertices.ToArray();
+            filter.mesh.triangles = indices.ToArray();
+            obj.transform.localScale = Vector3.one;
+            filter.mesh.RecalculateNormals();
+            collider.sharedMesh = filter.mesh;
+        }
+    }
+    */
     public static void inputMesh(GameObject obj, string file)
     {
         Mesh holderMesh = new Mesh();
@@ -298,6 +468,7 @@ public class Tool : MonoBehaviour {
         filter.mesh = holderMesh;
         obj.transform.localScale = Vector3.one;
     }
+    
     public static void indMesh(GameObject obj)
     {
         MeshFilter filter = obj.GetComponent<MeshFilter>();

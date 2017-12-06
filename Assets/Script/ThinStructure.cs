@@ -48,8 +48,10 @@ public class ThinStructure : MonoBehaviour {
     public static Vector3[] vertices_store;
     public static Vector3[] splitNorms_store;
     public static Vector3[] vertices;
+    public static bool[] isimpo;
     public static Edge[] edges;
     public static Vector3[] splitNorms;
+    public static float[] angles;
     public static bool[] splitReverse;
     public static AngleArg[] angleArgs;
     public static CompInfo[] compinfo_edge;
@@ -93,6 +95,8 @@ public class ThinStructure : MonoBehaviour {
         linkInfo = new HashSet<int>[verticeNum];
         verticesvertices = new HashSet<int>[verticeNum];
         verticesedges = new HashSet<int>[verticeNum];
+        isimpo = new bool[verticeNum];
+        angles = new float[edgeNum];
         for (int i = 0; i < edgeNum; i++) angleArgs[i] = new AngleArg();
         for (int i = 0; i < edgeNum; i++) compinfo_edge[i] = new CompInfo();
         for (int i = 0; i < verticeNum; i++) compinfo_vert[i] = new CompInfo();
@@ -110,7 +114,27 @@ public class ThinStructure : MonoBehaviour {
             for (int j = 0; j < edgeNum; j++) edgeConnMap[i][j] = -1;
         }
     }
-    
+    public static void calImpo() {
+        for (int i = 0; i < verticeNum; i++)
+        {
+            if (verticesedges[i].Count != 2) isimpo[i] = true;
+            else
+            {
+                int i1 = -1;
+                int i2 = -1;
+                foreach (int idx in verticesedges[i])
+                {
+                    if (i1 == -1) i1 = idx;
+                    else if (i2 == -1) i2 = idx;
+                }
+                Vector3 vec1 = (vertices[edges[i1].idx2] - vertices[edges[i1].idx1]).normalized;
+                Vector3 vec2 = (vertices[edges[i2].idx2] - vertices[edges[i2].idx1]).normalized;
+                if (edges[i1].idx1 != edges[i2].idx1) vec2 *= -1;
+                if (Vector3.Angle(vec1, vec2) < 150) isimpo[i] = true;
+                else isimpo[i] = false;
+            }
+        }
+    }
     public static int groupnum;
     public static HashSet<int>[] vertgroup;
     public static HashSet<int> importantVert;
@@ -317,6 +341,26 @@ public class ThinStructure : MonoBehaviour {
                 splitNorms[i] = Tool.calPerpend(edges[i].vec, new Vector3(0, 0, 1));
             }
         }
+
+        //read rotatearg
+        if (File.Exists(path + "rotatearg.txt"))
+        {
+            angles = new float[ThinStructure.edgeNum];
+            file = new System.IO.StreamReader(path + "rotatearg.txt");
+            for (int i = 0; i < ThinStructure.edgeNum; i++)
+            {
+                line = file.ReadLine(); items = line.Split(' ');
+                angles[i] = float.Parse(items[0]);
+            }
+            file.Close();
+        }
+        else {
+            angles = new float[ThinStructure.edgeNum];
+        }
+        //*****************************************************
+        calImpo();
+        store();
+
     }
     public static void basicRead(int tar)
     {
@@ -541,6 +585,35 @@ public class ThinStructure : MonoBehaviour {
             sb.Append(string.Format("{0} {1} {2} \n", splitNorm.x, splitNorm.y, splitNorm.z));
         }
         string filename = path + "splitinfo.txt";
+        using (StreamWriter sw = new StreamWriter(filename))
+        {
+            sw.Write(sb.ToString());
+        }
+    }
+    public static void outputsplitNorms_ori(string path)
+    {
+        //write splitInfo
+        StringBuilder sb = new StringBuilder();
+        for (int i = 0; i < edgeNum; i++)
+        {
+            Vector3 splitNorm = splitNorms_store[i];
+            sb.Append(string.Format("{0} {1} {2} \n", splitNorm.x, splitNorm.y, splitNorm.z));
+        }
+        string filename = path + "splitinfo.txt";
+        using (StreamWriter sw = new StreamWriter(filename))
+        {
+            sw.Write(sb.ToString());
+        }
+    }
+    public static void outputAngles(string path)
+    {
+        //write angles
+        StringBuilder sb = new StringBuilder();
+        for (int i = 0; i < edgeNum; i++)
+        {
+            sb.Append(string.Format("{0}\n", angles[i]));
+        }
+        string filename = path + "rotatearg.txt";
         using (StreamWriter sw = new StreamWriter(filename))
         {
             sw.Write(sb.ToString());
@@ -800,20 +873,31 @@ public class ThinStructure : MonoBehaviour {
     public static float calTotalAngDif(float[] angles) {
         Vector3[] norm = new Vector3[splitNorms.Length];
         for (int i = 0; i < splitNorms.Length; i++) {
-            norm[i] = Quaternion.AngleAxis(angles[i], edges[i].vec) * splitNorms[i];
+            norm[i] = (Quaternion.AngleAxis(angles[i], edges[i].vec) * splitNorms[i]).normalized;
         }
         float angle = 0;
         for (int i = 0; i < vertices.Length; i++)
         {
-            foreach (int e1 in verticesedges[i])
+            //float aa = 1;
+            float aa = 0;
+            foreach (int j in verticesedges[i])
             {
-                foreach (int e2 in verticesedges[i])
+                foreach (int k in verticesedges[i])
                 {
-                    if (e1 == e2) continue;
-                    float a = Vector3.Angle(norm[e1], norm[e2]);
-                    angle += a > 90 ? a : 180 - a;
+                    if (j >= k) continue;
+                    Vector3 n1 = norm[j].normalized;
+                    Vector3 n2 = norm[k].normalized;
+                    float v = Mathf.Abs(Vector3.Dot(n1, n2));
+                    //aa = aa < v ? aa : v;
+                    aa += v;
                 }
             }
+            if (isimpo[i])
+            {
+                //curval = ((int)(curval * 1000)) * 1000;
+                aa = aa * 1000;
+            }
+            angle += aa;
         }
         return angle;
     }
@@ -822,6 +906,44 @@ public class ThinStructure : MonoBehaviour {
         for (int i = 0; i < splitNorms.Length; i++)
         {
             splitNorms[i] = Quaternion.AngleAxis(angles[i], edges[i].vec) * splitNorms[i];
+            ThinStructure.angles[i] = angles[i];
+        }
+    }
+    public static void applyRot(Quaternion rot) {
+        for (int i = 0; i < vertices.Length; i++) {
+            vertices[i] = rot * vertices_store[i];
+        }
+        for (int i = 0; i < edges.Length; i++) {
+            splitNorms[i] = rot * splitNorms_store[i];
         }
     }
 }
+
+/*
+float aa = 1;
+Vector3 common = Vector3.zero;
+int[] es = new int[verticesedges[i].Count];
+Vector3[] norm_ = new Vector3[verticesedges[i].Count];
+int j = 0; foreach (int e in verticesedges[i]) {
+    es[j] = e;
+    norm_[j++] = norm[e];
+}
+if (isimpo[i])
+{
+    for (j = 0; j < norm_.Length; j++)
+    {
+        float dot1 = Vector3.Dot(norm_[j], common);
+        float dot2 = Vector3.Dot(-norm_[j], common);
+        if (dot2 > dot1) norm_[j] *= -1;
+        common += norm_[j];
+    }
+    common = (common / norm_.Length).normalized;
+    for (j = 0; j < norm_.Length; j++)
+    {
+        Vector3 per = Tool.calPerpend(edges[es[j]].vec, common).normalized;
+        float dot = Vector3.Dot(per, norm_[j]);
+        aa = dot < aa ? dot : aa;
+    }
+}
+angle += aa;
+*/

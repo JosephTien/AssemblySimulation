@@ -1,0 +1,2 @@
+del *.voxel
+del *.obj
