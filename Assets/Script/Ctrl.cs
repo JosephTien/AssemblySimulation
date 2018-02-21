@@ -8,6 +8,7 @@ public class Ctrl : MonoBehaviour {
     float moveRate = 0.25f;
     static Vector3 xaxis = new Vector3(0, 1, 0);
     static Vector3 yaxis = new Vector3(1, 0, 0);
+    static Vector3 zaxis = new Vector3(0, 0, 1);
     static Vector3 move = new Vector3(0, 0, 0);
     static Vector3 realpos = new Vector3(0, 0, 0);
     public static bool valid = true;
@@ -15,13 +16,37 @@ public class Ctrl : MonoBehaviour {
     bool reverse = false;
     static int state = 0;
     static int statenum = 8;
+    static float defaultDis = -1000;
     void Start () {
         realpos = Camera.main.gameObject.transform.position;
     }
 	
 	void Update () {
-		
-	}
+        if (Input.GetKeyDown(KeyCode.N))
+        {
+            Vector3 campos = realpos;
+            Quaternion camrot = Camera.main.gameObject.transform.rotation;
+            Quaternion rot = Quaternion.AngleAxis(15, zaxis);
+            realpos = rot * campos;
+            Camera.main.gameObject.transform.rotation = rot * camrot;
+            Camera.main.gameObject.transform.position = realpos + Camera.main.transform.rotation * move;
+            xaxis = rot * xaxis;
+            yaxis = rot * yaxis;
+            zaxis = rot * zaxis;
+        }
+        if (Input.GetKeyDown(KeyCode.M))
+        {
+            Vector3 campos = realpos;
+            Quaternion camrot = Camera.main.gameObject.transform.rotation;
+            Quaternion rot = Quaternion.AngleAxis(-15, zaxis);
+            realpos = rot * campos;
+            Camera.main.gameObject.transform.rotation = rot * camrot;
+            Camera.main.gameObject.transform.position = realpos + Camera.main.transform.rotation * move;
+            xaxis = rot * xaxis;
+            yaxis = rot * yaxis;
+            zaxis = rot * zaxis;
+        }
+    }
     public static void rotateView(float rx, float ry) {
         //Vector3 campos = Camera.main.gameObject.transform.position;
         Vector3 campos = realpos;
@@ -34,6 +59,7 @@ public class Ctrl : MonoBehaviour {
         Camera.main.gameObject.transform.position = realpos + Camera.main.transform.rotation * move;
         xaxis = rot * xaxis;
         yaxis = rot * yaxis;
+        zaxis = rot * yaxis;
     }
     public static void setView(int statetar) {
         state = statetar - 1;
@@ -43,8 +69,9 @@ public class Ctrl : MonoBehaviour {
         state = (state + 1) % statenum;
         xaxis = new Vector3(0, 1, 0);
         yaxis = new Vector3(1, 0, 0);
+        zaxis = new Vector3(0, 0, 1);
         move = new Vector3(0, 0, 0);
-        realpos = new Vector3(0, 0, -250);
+        realpos = new Vector3(0, 0, defaultDis);
         Quaternion camrot = Quaternion.identity;
         if (state == 0) ;
         else if (state == 1) camrot = Quaternion.Euler(90, 0, 0);
@@ -56,6 +83,9 @@ public class Ctrl : MonoBehaviour {
         else if (state == 7) camrot = Quaternion.Euler(0, -180, 0);
         Camera.main.gameObject.transform.rotation = camrot;
         realpos = camrot* realpos;
+        xaxis = camrot * xaxis;
+        yaxis = camrot * yaxis;
+        zaxis = camrot * zaxis;
         Camera.main.gameObject.transform.position = realpos;
     }
 
@@ -73,8 +103,9 @@ public class Ctrl : MonoBehaviour {
         if (mouseDown&&valid)
         {
             Vector3 mouseDelta = Input.mousePosition - mouseStart;
-            //Vector3 campos = Camera.main.gameObject.transform.position;
-            Vector3 campos = realpos;
+            if (Input.GetKey(KeyCode.LeftControl)) mouseDelta.y = 0;
+             //Vector3 campos = Camera.main.gameObject.transform.position;
+             Vector3 campos = realpos;
             Quaternion camrot = Camera.main.gameObject.transform.rotation;
             Quaternion rotx = Quaternion.AngleAxis(mouseDelta.x * moveRate, xaxis);
             Quaternion roty = Quaternion.AngleAxis(-mouseDelta.y * moveRate, yaxis);
@@ -84,6 +115,7 @@ public class Ctrl : MonoBehaviour {
             Camera.main.gameObject.transform.position = realpos + Camera.main.transform.rotation * move;
             xaxis = rot * xaxis;
             yaxis = rot * yaxis;
+            zaxis = rot * zaxis;
         }
         mouseStart = Input.mousePosition;
         if (!valid) return;

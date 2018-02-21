@@ -64,6 +64,7 @@ public class Visualization : MonoBehaviour {
     UnityEngine.UI.Slider Slider3;
     List<GameObject> knifeGos;
     GameObject Grid;
+    List<GameObject> Grids;
     GameObject Assist;
     //**************************************
     void Start() {
@@ -81,11 +82,13 @@ public class Visualization : MonoBehaviour {
     int atar = 0;
     bool moviemode = true;
     public bool assemMode = false;
+    int gridshowstate = 0;
 
     Vector3 mouseStart;
     bool mouseDown = false;
     Vector3 xaxis = new Vector3(0, 1, 0);
     Vector3 yaxis = new Vector3(1, 0, 0);
+    Vector3 zaxis = new Vector3(0, 0, 1);
     float moveRate = 0.25f;
 
     void Update() {
@@ -226,7 +229,40 @@ public class Visualization : MonoBehaviour {
         {
             showTest();
         }
+        if (Input.GetKeyDown(KeyCode.U) || (Input.GetKey(KeyCode.U) && Input.GetKey(KeyCode.Space)))
+        {
+            ru.z += divmove * l;
+            calBound_zRange();
+            tuneGrid();
+            griddiv_up.transform.position = new Vector3(0, 0, ru.z + l / 2);
+            Msg.text = "" + ru.z;
+        }
+        if (Input.GetKeyDown(KeyCode.J) || (Input.GetKey(KeyCode.J) && Input.GetKey(KeyCode.Space)))
+        {
+            ru.z -= divmove * l;
+            calBound_zRange();
+            tuneGrid();
+            griddiv_up.transform.position = new Vector3(0, 0, ru.z + l / 2);
+            Msg.text = "" + ru.z;
+        }
+        if (Input.GetKeyDown(KeyCode.I) || (Input.GetKey(KeyCode.I) && Input.GetKey(KeyCode.Space)))
+        {
+            ld.z += divmove * l;
+            calBound_zRange();
+            tuneGrid();
+            griddiv_down.transform.position = new Vector3(0, 0, ld.z + l / 2);
+            Msg.text = "" + ld.z;
+        }
+        if (Input.GetKeyDown(KeyCode.K) || (Input.GetKey(KeyCode.K) && Input.GetKey(KeyCode.Space)))
+        {
+            ld.z -= divmove * l;
+            calBound_zRange();
+            tuneGrid();
+            griddiv_down.transform.position = new Vector3(0, 0, ld.z + l / 2);
+            Msg.text = "" + ld.z;
+        }
         if (Input.GetKeyDown(KeyCode.Alpha1)) Ctrl.setView(0);
+        if (Input.GetKeyDown(KeyCode.Alpha2)) Ctrl.setView(1);
         /*
         if (Input.GetKeyDown(KeyCode.Alpha8)) Ctrl.setView(7);
         if (Input.GetKeyDown(KeyCode.Alpha1)) Ctrl.setView(1);
@@ -246,6 +282,23 @@ public class Visualization : MonoBehaviour {
         if (Input.GetKeyDown(KeyCode.H)) { tunemove.x += l; tuneGrid(); }
         if (Input.GetKeyDown(KeyCode.R)) { tunemove.z -= l; tuneGrid(); }
         if (Input.GetKeyDown(KeyCode.Y)) { tunemove.z += l; tuneGrid(); }
+        if (Input.GetKeyDown(KeyCode.X)) {
+            gridshowstate = 1;
+            tuneGrid();
+        }
+        if (Input.GetKeyDown(KeyCode.C)) {
+            gridshowstate = 2;
+            tuneGrid();
+        }
+        if (Input.GetKeyDown(KeyCode.V)) {
+            gridshowstate = 3;
+            tuneGrid();
+        }
+        if (Input.GetKeyDown(KeyCode.B))
+        {
+            gridshowstate = 0;
+            tuneGrid();
+        }
         if (Input.GetKeyDown(KeyCode.UpArrow))
         {
             Slider3.value++;
@@ -310,6 +363,7 @@ public class Visualization : MonoBehaviour {
                 {
                     if (vec.magnitude < disthre) vec = vec.normalized * disthre;
                     shape.instance.transform.position += vec;
+                    Msg.text = "shape_" + shape.id + ", Dis : " + shape.coldis;
                 }
             }
         }
@@ -339,12 +393,27 @@ public class Visualization : MonoBehaviour {
                 Assist.transform.rotation = rot * assistrot;
             }
             mouseStart = Input.mousePosition;
+            //*******************************
+            if (Input.GetKeyDown(KeyCode.N))
+            {
+                Vector3 mouseDelta = Input.mousePosition - mouseStart;
+                Quaternion assistrot = Assist.transform.rotation;
+                Quaternion rot = Quaternion.AngleAxis(15, zaxis);
+                Assist.transform.rotation = rot * assistrot;
+            }
+            if (Input.GetKeyDown(KeyCode.M))
+            {
+                Vector3 mouseDelta = Input.mousePosition - mouseStart;
+                Quaternion assistrot = Assist.transform.rotation;
+                Quaternion rot = Quaternion.AngleAxis(-15, zaxis);
+                Assist.transform.rotation = rot * assistrot;
+            }
         }
     }
     //**************************************
     float timediv = 10;
     float disthre = 0.5f;
-    float dismul = 300;
+    float dismul = 300;//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     float scaleval = 1;
     bool isRotateMode = false;
     //**************************************
@@ -360,6 +429,10 @@ public class Visualization : MonoBehaviour {
     bool zipMode = true;
     bool grided = false;
     Vector3 tunemove;
+    GameObject griddiv_up;
+    GameObject griddiv_down;
+    int divmove = 1;
+    bool alignMode = false;
     //**************************************
     Vector3 ld = Vector3.zero, ru = Vector3.zero, cent, size;
     Vector3 ld_, ru_;
@@ -420,6 +493,54 @@ public class Visualization : MonoBehaviour {
         shapes = new List<Shape>();
         scaleval = 1;
         grided = false;
+        //***************************************************
+        calBound();
+        grided = false;
+        //***************************************************
+    }
+    public void calBound() {
+        ThinStructure.calBounding(out ru, out ld);
+        ld -= new Vector3(radii * 5, radii * 5, radii * 5);
+        ru += new Vector3(radii * 5, radii * 5, radii * 5);
+        Vector3 dif = (ru - ld) / (l * divmove);
+        dif = (new Vector3(Mathf.Ceil(dif.x), Mathf.Ceil(dif.y), Mathf.Ceil(dif.z))) * (l * divmove);
+        ru = ld + dif;
+    }
+    public void calBound_zRange()
+    {
+        ThinStructure.calBounding(out ru, out ld, ld.z, ru.z);
+        ld -= new Vector3(radii * 5, radii * 5, 0);
+        ru += new Vector3(radii * 5, radii * 5, 0);
+        Vector3 dif = (ru - ld) / (l * divmove);
+        dif = (new Vector3(Mathf.Ceil(dif.x), Mathf.Ceil(dif.y), Mathf.Ceil(dif.z))) * (l * divmove);
+        ru = ld + dif;
+    }
+    public void showGrid()
+    {
+        bool active = GameObject.Find("Canvas/ShowGrid").GetComponent<UnityEngine.UI.Toggle>().isOn;
+        Grid.SetActive(active);
+    }
+    public void showGridDiv() {
+        
+        //*************************************************
+        if (griddiv_up == null) {
+            griddiv_up = GameObject.Instantiate(Resources.Load("Plane5") as GameObject);
+            griddiv_up.name = "DivPlane";
+            griddiv_up.transform.parent = GameObject.Find("Collect").transform;
+            griddiv_up.transform.localScale = new Vector3((ru - ld).x / 2 * 1.5f, (ru - ld).y * 1.5f, 1);
+        }
+        if (griddiv_down == null)
+        {
+            griddiv_down = GameObject.Instantiate(Resources.Load("Plane5") as GameObject);
+            griddiv_down.name = "DivPlane";
+            griddiv_down.transform.parent = GameObject.Find("Collect").transform;
+            griddiv_down.transform.localScale = new Vector3((ru - ld).x / 2 * 1.5f, (ru - ld).y * 1.5f, 1);
+        }
+        bool active = GameObject.Find("Canvas/ShowGridDiv").GetComponent<UnityEngine.UI.Toggle>().isOn;
+        griddiv_up.SetActive(active);
+        griddiv_down.SetActive(active);
+        griddiv_up.transform.position = new Vector3(0, 0, ru_.z + l / 2);
+        griddiv_down.transform.position = new Vector3(0, 0, ld_.z - l / 2);
     }
     public void writeData() {
         if (!loaded) return;
@@ -737,12 +858,24 @@ public class Visualization : MonoBehaviour {
         //tunemove.z = tunemove.z % (stx * l);
         //ld_ = ld + tunemove - new Vector3(l * stx, l * sty, l * stz);
         //**************************************************************
-        ld_ = ld + tunemove;
-        ru_ = new Vector3(ld_.x + nx * l, ld_.y + ny * l, ld_.z + nz * l);
-        while (ru_.x < ru.x) ru_.x += stx * l; while (ru_.y < ru.y) ru_.y += sty * l; while (ru_.z < ru.z) ru_.z += stz * l;
-        while (ld_.x > ld.x) ld_.x -= stx * l; while (ld_.y > ld.y) ld_.y -= sty * l; while (ld_.z > ld.z) ld_.z -= stz * l;
-        while (ru_.x > ru.x + stx * l) ru_.x -= stx * l; while (ru_.y > ru.y + sty * l) ru_.y -= sty * l; while (ru_.z > ru.z + stz * l) ru_.z -= stz * l;
-        while (ld_.x < ld.x - stx * l) ld_.x += stx * l; while (ld_.y < ld.y - sty * l) ld_.y += sty * l; while (ld_.z < ld.z - stz * l) ld_.z += stz * l;
+        if (!alignMode)
+        {
+            ld_ = ld + tunemove;
+            ru_ = new Vector3(ld_.x + nx * l, ld_.y + ny * l, ld_.z + nz * l);
+            while (ru_.x <= ru.x) ru_.x += stx * l; while (ru_.y < ru.y) ru_.y += sty * l; //while (ru_.z < ru.z) ru_.z += stz * l;
+            while (ld_.x > ld.x) ld_.x -= stx * l; while (ld_.y > ld.y) ld_.y -= sty * l; //while (ld_.z > ld.z) ld_.z -= stz * l;
+            while (ru_.x > ru.x + stx * l) ru_.x -= stx * l; while (ru_.y > ru.y + sty * l) ru_.y -= sty * l; //while (ru_.z > ru.z + stz * l) ru_.z -= stz * l;
+            while (ld_.x < ld.x - stx * l) ld_.x += stx * l; while (ld_.y < ld.y - sty * l) ld_.y += sty * l; //while (ld_.z < ld.z - stz * l) ld_.z += stz * l;
+            
+        }
+        else {
+            ru_ = ru + tunemove;
+            ld_ = new Vector3(ru_.x - nx * l, ru_.y - ny * l, ru_.z - nz * l);
+            while (ru_.x <= ru.x) ru_.x += stx * l; while (ru_.y < ru.y) ru_.y += sty * l; //while (ru_.z < ru.z) ru_.z += stz * l;
+            while (ld_.x > ld.x) ld_.x -= stx * l; while (ld_.y > ld.y) ld_.y -= sty * l; //while (ld_.z > ld.z) ld_.z -= stz * l;
+            while (ru_.x > ru.x + stx * l) ru_.x -= stx * l; while (ru_.y > ru.y + sty * l) ru_.y -= sty * l; //while (ru_.z > ru.z + stz * l) ru_.z -= stz * l;
+            while (ld_.x < ld.x - stx * l) ld_.x += stx * l; while (ld_.y < ld.y - sty * l) ld_.y += sty * l; //while (ld_.z < ld.z - stz * l) ld_.z += stz * l;
+        }
         cent = (ld_ + ru_) / 2;
         size = (ru_ - ld_) + new Vector3(l, l, l);
         //**************************************************************
@@ -760,7 +893,8 @@ public class Visualization : MonoBehaviour {
         Grid = new GameObject("Grid");
         Grid.transform.parent = GameObject.Find("Collect").transform;
         Color color = Tool.RandomColor(); color.a = 1f;
-        for (int i = 0; i < ntx - 1; i++)
+        Grids = new List<GameObject>();
+        for (int i = -1; i < ntx; i++)
         {
             Vector3 p = new Vector3(ld_.x + l * ((i + 1) * stx - 0.5f), cent.y, cent.z);
             Quaternion fromto = Quaternion.FromToRotation(new Vector3(0, 1, 0), new Vector3(1, 0, 0));
@@ -768,10 +902,11 @@ public class Visualization : MonoBehaviour {
             plane.transform.parent = Grid.transform;
             plane.transform.localScale = new Vector3(size.y / 2, 1, size.z / 2);
             plane.name = "gridx";
+            Grids.Add(plane);
             //Tool.setColor(plane, color);
         }
         color = Tool.RandomColor(); color.a = 1f;
-        for (int i = 0; i < nty - 1; i++)
+        for (int i = -1; i < nty; i++)
         {
             Vector3 p = new Vector3(cent.x, ld_.y + l * ((i + 1) * sty - 0.5f), cent.z);
             Quaternion fromto = Quaternion.FromToRotation(new Vector3(0, 1, 0), new Vector3(0, 1, 0));
@@ -779,10 +914,11 @@ public class Visualization : MonoBehaviour {
             plane.transform.parent = Grid.transform;
             plane.transform.localScale = new Vector3(size.x / 2, 1, size.z / 2);
             plane.name = "gridy";
+            Grids.Add(plane);
             //Tool.setColor(plane, color);
         }
         color = Tool.RandomColor(); color.a = 1f;
-        for (int i = 0; i < ntz - 1; i++)
+        for (int i = -1; i < ntz; i++)
         {
             Vector3 p = new Vector3(cent.x, cent.y, ld_.z + l * ((i + 1) * stz - 0.5f));
             Quaternion fromto = Quaternion.FromToRotation(new Vector3(0, 1, 0), new Vector3(0, 0, 1));
@@ -790,8 +926,58 @@ public class Visualization : MonoBehaviour {
             plane.transform.parent = Grid.transform;
             plane.transform.localScale = new Vector3(size.x / 2, 1, size.y / 2);
             plane.name = "gridz";
+            Grids.Add(plane);
             //Tool.setColor(plane, color);
         }
+        //**************************************************************
+        foreach (var gr in Grids)
+        {
+            string name = gr.name;
+            if (name == "gridx" || name == "gridy" || name == "gridz")
+            {
+                if (gridshowstate == 1 && name != "gridx") gr.gameObject.SetActive(false); 
+                else if (gridshowstate == 2 && name != "gridy") gr.gameObject.SetActive(false);
+                else if (gridshowstate == 3 && name != "gridz") gr.gameObject.SetActive(false);
+                else gr.gameObject.SetActive(true);
+            }
+        }
+    }
+    public bool readBound()
+    {
+        string filename = path + "boundinfo.txt";
+        if (File.Exists(filename))
+        {
+            System.IO.StreamReader file = new System.IO.StreamReader(filename);
+            string line;
+            string[] items;
+            line = file.ReadLine();
+            items = line.Split(' ');
+            ld_.x = float.Parse(items[0]);
+            ld_.y = float.Parse(items[1]);
+            ld_.z = float.Parse(items[2]);
+            ru_.x = float.Parse(items[3]);
+            ru_.y = float.Parse(items[4]);
+            ru_.z = float.Parse(items[5]);
+            line = file.ReadLine();
+            items = line.Split(' ');
+            stx = int.Parse(items[0]);
+            sty = int.Parse(items[1]);
+            stz = int.Parse(items[2]);
+
+            if (!file.EndOfStream) {
+                line = file.ReadLine();
+                items = line.Split(' ');
+                if (int.Parse(items[0]) == 0) alignMode = false;
+                else alignMode = true;
+                if (GameObject.Find("Canvas/ToggleAlignMode").GetComponent<UnityEngine.UI.Toggle>().isOn != alignMode)
+                    GameObject.Find("Canvas/ToggleAlignMode").GetComponent<UnityEngine.UI.Toggle>().isOn = alignMode;
+            }
+
+            GameObject.Find("Canvas/CalInit/Slider").GetComponent<UnityEngine.UI.Slider>().value = stx;
+            file.Close();
+            return true;
+        }
+        return false;
     }
     public void genGrid() {
         //*********************************************
@@ -801,16 +987,20 @@ public class Visualization : MonoBehaviour {
             Destroy(Grid);
             return;
         }
+        //*********************************************
         grided = true;
-        ThinStructure.calBounding(out ru, out ld);
-        ld -= new Vector3(radii * 5, radii * 5, radii * 5);
-        ru += new Vector3(radii * 5, radii * 5, radii * 5);
+        tunemove = Vector3.zero;
+        readBound();
+        tunemove = Vector3.zero;
         tuneGrid();
+        //*********************************************
+        showGridDiv();
     }
     public void outoutGrid() {
         StringBuilder sb = new StringBuilder();
         sb.Append(string.Format("{0} {1} {2} {3} {4} {5}\n", ld_.x, ld_.y, ld_.z, ru_.x, ru_.y, ru_.z));
         sb.Append(string.Format("{0} {1} {2}\n", stx, sty, stz));
+        sb.Append(string.Format("{0}\n", alignMode?1:0));
         string filename = path + "boundinfo.txt";
         using (StreamWriter sw = new StreamWriter(filename))
         {
@@ -852,5 +1042,12 @@ public class Visualization : MonoBehaviour {
     public void toggleAssemMode()
     {
         assemMode = GameObject.Find("Canvas/AssemMode").GetComponent<UnityEngine.UI.Toggle>().isOn;
+    }
+    public void quickView() {
+        Dropdown.value = 34;
+    }
+    public void toggleAlignMode() {
+        alignMode = GameObject.Find("Canvas/ToggleAlignMode").GetComponent<UnityEngine.UI.Toggle>().isOn;
+        tuneGrid();
     }
 }

@@ -69,7 +69,7 @@ public class ThinStructure : MonoBehaviour {
     public static int[] solvedinfo;
     public static int verticeNum;
     public static int edgeNum;
-    public static float tuberadii = 15f;
+    public static float tuberadii = 15f;//!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!//
     public static int curSet;
     public static float myscale = 1;
     // Use this for initialization
@@ -336,9 +336,17 @@ public class ThinStructure : MonoBehaviour {
             }
             file.Close();
         }
-        else {
-            for (int i = 0; i < splitNorms.Length; i++) {
-                splitNorms[i] = Tool.calPerpend(edges[i].vec, new Vector3(0, 0, 1));
+        else
+        {
+            Vector3[] samp = { new Vector3(-1, 0, 0), new Vector3(1, 0, 0), new Vector3(0, -1, 0), new Vector3(0, 1, 0), new Vector3(0, 0, -1), new Vector3(0, 0, 1) };
+            for (int i = 0; i < splitNorms.Length; i++)
+            {
+                splitNorms[i].Normalize();
+                for (int j = 0; j < 6; j++)
+                {
+                    float dot = Vector3.Dot(splitNorms[i], samp[j]);
+                    if (Mathf.Abs(dot) < 0.05) splitNorms[i] = Tool.calPerpend(edges[i].vec, samp[j]);
+                }
             }
         }
 
@@ -433,7 +441,25 @@ public class ThinStructure : MonoBehaviour {
             }
             file.Close();
         }
-        
+        else
+        {
+            Vector3[] samp = { new Vector3(-1, 0, 0), new Vector3(1, 0, 0), new Vector3(0, -1, 0), new Vector3(0, 1, 0), new Vector3(0, 0, -1), new Vector3(0, 0, 1) };
+            for (int i = 0; i < splitNorms.Length; i++)
+            {
+                splitNorms[i].Normalize();
+                float minDot = 1;
+                for (int j = 0; j < 6; j++)
+                {
+                    float absdot = Mathf.Abs(Vector3.Dot(edges[i].vec, samp[j]));
+                    if (absdot <= minDot)
+                    {
+                        splitNorms[i] = Tool.calPerpend(edges[i].vec, samp[j]);
+                        minDot = absdot;
+                    }
+                }
+            }
+        }
+
         //read link info
         if (File.Exists(".\\inputSet\\" + tar + "\\input\\linkinfo.txt"))
         {
@@ -756,6 +782,8 @@ public class ThinStructure : MonoBehaviour {
             go.transform.parent = GameObject.Find("Collect").transform;
             edgeGOs[i] = go;
             go.name = "Edge_" + i;
+
+
             /**/
             GameObject plane = GameObject.Instantiate(Resources.Load("Plane3"), cent, fromto) as GameObject;
             plane.transform.parent = GameObject.Find("Assist").transform;
@@ -858,6 +886,27 @@ public class ThinStructure : MonoBehaviour {
             min.y = Mathf.Min(min.y, v.y);
             min.z = Mathf.Min(min.z, v.z);
         }
+    }
+    public static void calBounding(out Vector3 max, out Vector3 min, float zmin, float zmax)
+    {
+        /*************************************************/
+        //邊值計算
+        max = new Vector3(float.MinValue, float.MinValue, float.MinValue);
+        min = new Vector3(float.MaxValue, float.MaxValue, float.MaxValue);
+        for (int i = 0; i < ThinStructure.verticeNum; i++)
+        {
+            Vector3 v = ThinStructure.vertices[i];
+            if (v.z >= zmin && v.z < zmax) {
+                max.x = Mathf.Max(max.x, v.x);
+                max.y = Mathf.Max(max.y, v.y);
+                max.z = Mathf.Max(max.z, v.z);
+                min.x = Mathf.Min(min.x, v.x);
+                min.y = Mathf.Min(min.y, v.y);
+                min.z = Mathf.Min(min.z, v.z);
+            }
+        }
+        min.z = zmin;
+        max.z = zmax;
     }
     public static void moveToCenter(Vector3 center)
     {
